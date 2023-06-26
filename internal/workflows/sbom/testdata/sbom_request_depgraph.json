@@ -1,0 +1,41 @@
+{
+  "schemaVersion": "1.2.0",
+  "pkgManager": {
+    "name": "apk"
+  },
+  "pkgs": [
+    {
+      "id": "docker-image|alpine:3.17.0",
+      "info": {
+        "name": "docker-image|alpine",
+        "version": "3.17.0"
+      }
+    },
+    {
+      "id": "testpkg@10.10",
+      "info": {
+        "name": "testpkg",
+        "version": "10.10"
+      }
+    }
+  ],
+  "graph": {
+    "rootNodeId": "root-node",
+    "nodes": [
+      {
+        "nodeId": "root-node",
+        "pkgId": "docker-image|alpine:3.17.0",
+        "deps": [
+          {
+            "nodeId": "testpkg@10.10"
+          }
+        ]
+      },
+      {
+        "nodeId": "testpkg@10.10",
+        "pkgId": "testpkg@10.10",
+        "deps": []
+      }
+    ]
+  }
+}
