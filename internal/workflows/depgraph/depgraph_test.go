@@ -3,6 +3,7 @@ package depgraph //nolint:testpackage // we want to use private functions.
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/snyk/container-cli/internal/common/constants"
 	"github.com/snyk/container-cli/internal/common/workflows"
 	"github.com/snyk/go-application-framework/pkg/configuration"
 	"github.com/snyk/go-application-framework/pkg/workflow"
@@ -113,7 +114,7 @@ func testDepGraphFromFile(t *testing.T, dgName, fileName string, actual workflow
 	err = json.Unmarshal(content, &expectedDG)
 	require.NoError(t, err)
 
-	require.Equal(t, depGraphContentType, actual.GetContentType())
+	require.Equal(t, constants.ContentTypeJSON, actual.GetContentType())
 	require.Equal(t, dgName, actual.GetContentLocation())
 
 	payload, ok := actual.GetPayload().([]byte)

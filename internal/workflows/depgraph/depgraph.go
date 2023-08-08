@@ -29,7 +29,7 @@ var Workflow = &DepGraphWorkflow{
 	},
 }
 
-func (d DepGraphWorkflow) InitWorkflow(e workflow.Engine) error {
+func (d *DepGraphWorkflow) InitWorkflow(e workflow.Engine) error {
 	_, err := e.Register(
 		d.Identifier(),
 		d.GetConfigurationOptionsFromFlagSet(),
@@ -84,14 +84,12 @@ func buildCliCommand(flags []flags.Flag, config configuration.Configuration) []s
 		arg := flag.GetAsCLIArgument(config)
 		cmdArgs = append(cmdArgs, arg)
 	}
-	// This is the directory for OS, or the container name for container. It's not a flag, but a
-	// positional argument.
 
 	cmdArgs = append(cmdArgs, config.GetString(constants.ContainerTargetArgName))
 	return cmdArgs
 }
 
-// TODO: all of the code until EOF could also be taken from Link's implementations / could be
+// TODO: all the code until EOF could also be taken from Link's implementations / could be
 // shared.
 
 // depGraphSeparator separates the depgraph from the target name and the rest.
@@ -99,8 +97,6 @@ func buildCliCommand(flags []flags.Flag, config configuration.Configuration) []s
 //
 // The `(?s)` at the beginning enables multiline-matching.
 var depGraphSeparator = regexp.MustCompile(`(?s)DepGraph data:(.*?)DepGraph target:(.*?)DepGraph end`)
-
-const depGraphContentType = "application/json"
 
 func (d DepGraphWorkflow) extractDepGraphsFromCLIOutput(output []byte) ([]workflow.Data, error) {
 	if len(output) == 0 {
@@ -114,8 +110,8 @@ func (d DepGraphWorkflow) extractDepGraphsFromCLIOutput(output []byte) ([]workfl
 			return nil, fmt.Errorf("malformed CLI output, got %v matches", len(match))
 		}
 
-		data := workflow.NewData(d.TypeIdentifier(), depGraphContentType, match[1])
-		data.SetMetaData("Content-Location", strings.TrimSpace(string(match[2])))
+		data := workflow.NewData(d.TypeIdentifier(), constants.ContentTypeJSON, match[1])
+		data.SetMetaData(constants.HeaderContentLocation, strings.TrimSpace(string(match[2])))
 		depGraphs = append(depGraphs, data)
 	}
 

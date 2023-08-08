@@ -1,12 +1,13 @@
 module github.com/snyk/container-cli
 
-go 1.20
+go 1.21
 
 require (
 	github.com/docker/distribution v2.8.2+incompatible
 	github.com/opencontainers/go-digest v1.0.0
-	github.com/snyk/cli-extension-sbom v0.0.0-20230608155631-7a29477be88a
 	github.com/snyk/go-application-framework v0.0.0-20230608152503-40b6d700aefa
+	github.com/spf13/pflag v1.0.5
+	github.com/stretchr/testify v1.8.4
 )
 
 require (
@@ -36,9 +37,7 @@ require (
 	github.com/spf13/afero v1.9.2 // indirect
 	github.com/spf13/cast v1.5.0 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
-	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/spf13/viper v1.13.0 // indirect
-	github.com/stretchr/testify v1.8.0 // indirect
 	github.com/subosito/gotenv v1.4.1 // indirect
 	golang.org/x/crypto v0.0.0-20220817201139-bc19a97f63c8 // indirect
 	golang.org/x/net v0.8.0 // indirect
@@ -51,5 +50,3 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
-
-replace github.com/snyk/cli-extension-sbom => github.com/snyk/cli-extension-sbom v0.0.0-20230622135844-5173198fcd8c
