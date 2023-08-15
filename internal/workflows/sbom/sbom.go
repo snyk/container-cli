@@ -2,13 +2,13 @@ package sbom
 
 import (
 	"fmt"
+	containerdepgraph "github.com/snyk/container-cli/internal/workflows/depgraph"
 
 	"github.com/docker/distribution/reference"
 	"github.com/opencontainers/go-digest"
 	"github.com/snyk/cli-extension-sbom/pkg/depgraph"
 	"github.com/snyk/cli-extension-sbom/pkg/flag"
 	"github.com/snyk/cli-extension-sbom/pkg/sbom"
-	containerdepgraph "github.com/snyk/container-cli/internal/depgraph"
 	"github.com/snyk/go-application-framework/pkg/configuration"
 	"github.com/snyk/go-application-framework/pkg/workflow"
 )

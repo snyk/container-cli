@@ -1,10 +1,10 @@
-package containercli
+package pkg
 
 import (
 	"fmt"
+	"github.com/snyk/container-cli/internal/workflows/depgraph"
+	"github.com/snyk/container-cli/internal/workflows/sbom"
 
-	"github.com/snyk/container-cli/internal/depgraph"
-	"github.com/snyk/container-cli/internal/sbom"
 	"github.com/snyk/go-application-framework/pkg/workflow"
 )
 
