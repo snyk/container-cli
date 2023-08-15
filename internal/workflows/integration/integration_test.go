@@ -2,11 +2,11 @@ package test
 
 import (
 	_ "embed"
+	containercli "github.com/snyk/container-cli/pkg"
 	"strings"
 	"testing"
 
 	sbomtest "github.com/snyk/cli-extension-sbom/test"
-	containercli "github.com/snyk/container-cli"
 	"github.com/snyk/go-application-framework/pkg/configuration"
 )
 
