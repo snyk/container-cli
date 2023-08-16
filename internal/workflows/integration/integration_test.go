@@ -2,7 +2,7 @@ package test
 
 import (
 	_ "embed"
-	containercli "github.com/snyk/container-cli/pkg"
+	containercli "github.com/snyk/container-cli/pkg/container"
 	"strings"
 	"testing"
 
