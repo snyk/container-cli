@@ -15,3 +15,7 @@ func InitBaseFlag(name string) *BaseFlag {
 		FlagSet: pflag.NewFlagSet(name, pflag.ExitOnError),
 	}
 }
+
+func (b BaseFlag) GetFlagSet() *pflag.FlagSet {
+	return b.FlagSet
+}
