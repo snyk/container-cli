@@ -42,7 +42,7 @@ func (w *sbomWorkflow) entrypoint(ictx workflow.InvocationContext, _ []workflow.
 	var logger = ictx.GetLogger()
 	var errFactory = errors.NewSbomErrorFactory(logger)
 
-	logger.Println("start ") // TODO: set logger prefix with workflow imageName so that we will be able to quickly get all logs related to the workflow for debugging
+	logger.Println("start the sbom workflow") // TODO: set logger prefix with workflow imageName so that we will be able to quickly get all logs related to the workflow for debugging
 
 	logger.Println("getting sbom format")
 	var format = flags.FlagSbomFormat.GetFlagValue(config)

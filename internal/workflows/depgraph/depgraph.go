@@ -9,10 +9,13 @@ import (
 	"github.com/snyk/container-cli/internal/common/workflows"
 	"github.com/snyk/go-application-framework/pkg/configuration"
 	"github.com/snyk/go-application-framework/pkg/workflow"
+	"log"
 	"os/exec"
 	"regexp"
 	"strings"
 )
+
+const internalErrorMessage = "an error occurred while running the underlying analysis needed to generate the depgraph"
 
 type DepGraphWorkflow struct {
 	workflows.BaseWorkflow
@@ -38,42 +41,47 @@ func (d *DepGraphWorkflow) InitWorkflow(e workflow.Engine) error {
 	return err
 }
 
-func (d DepGraphWorkflow) TypeIdentifier() workflow.Identifier {
+func (d *DepGraphWorkflow) TypeIdentifier() workflow.Identifier {
 	return workflow.NewTypeIdentifier(d.Identifier(), constants.DataTypeDepGraph)
 }
 
 var legacyCLIID = workflow.NewWorkflowIdentifier(constants.WorkflowIdentifierLegacyCli)
 
-func (d DepGraphWorkflow) entrypoint(ictx workflow.InvocationContext, _ []workflow.Data) ([]workflow.Data, error) {
+func (d *DepGraphWorkflow) entrypoint(ictx workflow.InvocationContext, _ []workflow.Data) ([]workflow.Data, error) {
 	// TODO: this is only tested through the integration test. We might want to add a unit-test for
 	// this :)
 	logger := ictx.GetLogger()
+	logger.SetPrefix(d.Name)
 	config := ictx.GetConfiguration()
 
-	logger.Println("start") // TODO: set logger prefix with workflow name so that we will be able to quickly get all logs related to the workflow for debugging
+	logger.Println("starting the depgraph workflow")
 
 	cmdArgs := buildCliCommand(d.Flags, config)
 
 	logger.Printf("cli invocation args: %v", cmdArgs)
 
-	// TODO: need to check if we need to clone the config instead of reuse
 	config.Set(configuration.RAW_CMD_ARGS, cmdArgs)
 	data, err := ictx.GetEngine().InvokeWithConfig(legacyCLIID, config)
 	if err != nil {
+		logger.Printf("failed to execute depgraph legacy workflow: %w", err)
 		return nil, extractLegacyCLIError(err, data)
+	}
+
+	if data[0] == nil {
+		return nil, mapInternalToUserError(logger, errors.New("empty depgraph legacy workflow response payload"), internalErrorMessage)
 	}
 
 	p, ok := data[0].GetPayload().([]byte)
 	if ok == false {
-		return nil, fmt.Errorf("could not convert payload to type `[]byte`")
+		return nil, mapInternalToUserError(logger, fmt.Errorf("could not convert payload, expected []byte, get %T", data[0].GetPayload()), internalErrorMessage)
 	}
 
-	depGraphList, err := d.extractDepGraphsFromCLIOutput(p)
+	depGraphList, err := extractDepGraphsFromCLIOutput(p, d.TypeIdentifier())
 	if err != nil {
-		return nil, fmt.Errorf("could not extract depGraphs from CLI output: %w", err)
+		return nil, mapInternalToUserError(logger, fmt.Errorf("could not extract depGraphs from CLI output: %w", err), internalErrorMessage)
 	}
 
-	logger.Printf("done (%d)", len(depGraphList))
+	logger.Printf("finished the depgraph workflow, number of depgraphs=%d", len(depGraphList))
 
 	return depGraphList, nil
 }
@@ -98,9 +106,9 @@ func buildCliCommand(flags []flags.Flag, config configuration.Configuration) []s
 // The `(?s)` at the beginning enables multiline-matching.
 var depGraphSeparator = regexp.MustCompile(`(?s)DepGraph data:(.*?)DepGraph target:(.*?)DepGraph end`)
 
-func (d DepGraphWorkflow) extractDepGraphsFromCLIOutput(output []byte) ([]workflow.Data, error) {
+func extractDepGraphsFromCLIOutput(output []byte, typeID workflow.Identifier) ([]workflow.Data, error) {
 	if len(output) == 0 {
-		return nil, noDependencyGraphsError{output}
+		return nil, errors.New("empty output")
 	}
 
 	matches := depGraphSeparator.FindAllSubmatch(output, -1)
@@ -110,20 +118,12 @@ func (d DepGraphWorkflow) extractDepGraphsFromCLIOutput(output []byte) ([]workfl
 			return nil, fmt.Errorf("malformed CLI output, got %v matches", len(match))
 		}
 
-		data := workflow.NewData(d.TypeIdentifier(), constants.ContentTypeJSON, match[1])
+		data := workflow.NewData(typeID, constants.ContentTypeJSON, match[1])
 		data.SetMetaData(constants.HeaderContentLocation, strings.TrimSpace(string(match[2])))
 		depGraphs = append(depGraphs, data)
 	}
 
 	return depGraphs, nil
-}
-
-type noDependencyGraphsError struct {
-	output []byte
-}
-
-func (n noDependencyGraphsError) Error() string {
-	return fmt.Sprintf("no dependency graphs found in output: %s", n.output)
 }
 
 // legacyCLIJSONError is the error type returned by the legacy cli.
@@ -139,7 +139,7 @@ func (e *legacyCLIJSONError) Error() string {
 }
 
 // extractLegacyCLIError extracts the error message from the legacy cli if possible.
-func extractLegacyCLIError(input error, data []workflow.Data) (output error) {
+func extractLegacyCLIError(input error, data []workflow.Data) error {
 	// if there's no data, we can't extract anything.
 	if len(data) == 0 {
 		return input
@@ -150,7 +150,7 @@ func extractLegacyCLIError(input error, data []workflow.Data) (output error) {
 	if errors.As(input, &exitErr) {
 		bytes, ok := data[0].GetPayload().([]byte)
 		if !ok {
-			return output
+			return nil
 		}
 
 		var decodedError legacyCLIJSONError
@@ -159,4 +159,9 @@ func extractLegacyCLIError(input error, data []workflow.Data) (output error) {
 		}
 	}
 	return input
+}
+
+func mapInternalToUserError(logger *log.Logger, err error, userMessage string) error {
+	logger.Printf(err.Error())
+	return errors.New(userMessage)
 }

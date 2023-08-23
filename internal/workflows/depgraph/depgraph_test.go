@@ -93,7 +93,7 @@ func TestExtractDepGraphsFromCLIOutput(t *testing.T) {
 			output, err := os.ReadFile(tc.cliOutputFile)
 			require.NoError(t, err)
 
-			data, err := d.extractDepGraphsFromCLIOutput(output)
+			data, err := extractDepGraphsFromCLIOutput(output)
 			require.NoError(t, err)
 
 			require.Len(t, data, len(tc.graphs))
