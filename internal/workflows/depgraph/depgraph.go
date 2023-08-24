@@ -4,15 +4,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
+	"os/exec"
+	"regexp"
+	"strings"
+
 	"github.com/snyk/container-cli/internal/common/constants"
 	"github.com/snyk/container-cli/internal/common/flags"
 	"github.com/snyk/container-cli/internal/common/workflows"
 	"github.com/snyk/go-application-framework/pkg/configuration"
 	"github.com/snyk/go-application-framework/pkg/workflow"
-	"log"
-	"os/exec"
-	"regexp"
-	"strings"
 )
 
 const internalErrorMessage = "an error occurred while running the underlying analysis needed to generate the depgraph"
@@ -63,7 +64,7 @@ func (d *DepGraphWorkflow) entrypoint(ictx workflow.InvocationContext, _ []workf
 	config.Set(configuration.RAW_CMD_ARGS, cmdArgs)
 	data, err := ictx.GetEngine().InvokeWithConfig(legacyCLIID, config)
 	if err != nil {
-		logger.Printf("failed to execute depgraph legacy workflow: %w", err)
+		logger.Printf(fmt.Errorf("failed to execute depgraph legacy workflow: %w", err).Error())
 		return nil, extractLegacyCLIError(err, data)
 	}
 

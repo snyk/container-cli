@@ -3,12 +3,13 @@ package sbom
 import (
 	"encoding/json"
 	"fmt"
+
 	"github.com/docker/distribution/reference"
 	"github.com/opencontainers/go-digest"
 	"github.com/snyk/go-application-framework/pkg/workflow"
 )
 
-func DepGraphMetadata(imgName string) (name, version string, err error) {
+func depGraphMetadata(imgName string) (name, version string, err error) {
 	// we currently don't have a way of extracting the clean image name & potentially a digest from
 	// the DepGraph output, so we use what's been passed on the command line.
 	ref, err := reference.Parse(imgName)
@@ -36,7 +37,7 @@ func DepGraphMetadata(imgName string) (name, version string, err error) {
 	}
 }
 
-func ParseDepGraph(depGraphs []workflow.Data) ([]json.RawMessage, error) {
+func parseDepGraph(depGraphs []workflow.Data) ([]json.RawMessage, error) {
 	depGraphsBytes := make([]json.RawMessage, 0, len(depGraphs))
 	for _, depGraph := range depGraphs {
 		// not sure if this can ever happen, but better be sure.

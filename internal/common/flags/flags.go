@@ -3,6 +3,7 @@ package flags
 import (
 	"fmt"
 	"github.com/snyk/container-cli/internal/workflows/sbom/constants"
+
 	"github.com/snyk/go-application-framework/pkg/configuration"
 )
 

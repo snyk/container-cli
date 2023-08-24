@@ -3,15 +3,16 @@ package depgraph //nolint:testpackage // we want to use private functions.
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+	"os/exec"
+	"testing"
+
 	"github.com/snyk/container-cli/internal/common/constants"
 	"github.com/snyk/container-cli/internal/common/workflows"
 	"github.com/snyk/go-application-framework/pkg/configuration"
 	"github.com/snyk/go-application-framework/pkg/workflow"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"os"
-	"os/exec"
-	"testing"
 )
 
 func Test_Depgraph_extractLegacyCLIError_extractError(t *testing.T) {
@@ -93,13 +94,12 @@ func TestExtractDepGraphsFromCLIOutput(t *testing.T) {
 			output, err := os.ReadFile(tc.cliOutputFile)
 			require.NoError(t, err)
 
-			data, err := extractDepGraphsFromCLIOutput(output)
+			data, err := extractDepGraphsFromCLIOutput(output, d.TypeIdentifier())
 			require.NoError(t, err)
 
 			require.Len(t, data, len(tc.graphs))
 			for i, graph := range tc.graphs {
 				testDepGraphFromFile(t, graph.name, graph.file, data[i])
-				i++
 			}
 		})
 	}
