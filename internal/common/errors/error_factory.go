@@ -1,19 +1,21 @@
 package errors
 
-import "log"
+import (
+	"github.com/rs/zerolog"
+)
 
 type ErrorFactory struct {
-	logger *log.Logger
+	logger *zerolog.Logger
 }
 
-func NewErrorFactory(logger *log.Logger) *ErrorFactory {
+func NewErrorFactory(logger *zerolog.Logger) *ErrorFactory {
 	return &ErrorFactory{
 		logger: logger,
 	}
 }
 
 func (ef *ErrorFactory) NewError(err error, userMsg string) *ContainerExtensionError {
-	ef.logger.Printf("ERROR: %s\n", err)
+	ef.logger.Error().Err(err).Send()
 
 	return &ContainerExtensionError{
 		err:     err,

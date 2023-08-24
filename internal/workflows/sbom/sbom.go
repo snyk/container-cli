@@ -1,6 +1,7 @@
 package sbom
 
 import (
+	"context"
 	"slices"
 
 	"github.com/snyk/container-cli/internal/common/constants"
@@ -9,26 +10,33 @@ import (
 	containerdepgraph "github.com/snyk/container-cli/internal/workflows/depgraph"
 	sbomconstants "github.com/snyk/container-cli/internal/workflows/sbom/constants"
 	"github.com/snyk/container-cli/internal/workflows/sbom/errors"
+	sbomerrors "github.com/snyk/container-cli/internal/workflows/sbom/errors"
 	"github.com/snyk/go-application-framework/pkg/configuration"
 	"github.com/snyk/go-application-framework/pkg/workflow"
 )
 
-type sbomWorkflow struct {
+type SbomWorkflow struct {
 	workflows.BaseWorkflow
-	depGraph *containerdepgraph.DepGraphWorkflow
+	depGraph   *containerdepgraph.DepGraphWorkflow
+	sbomClient SbomClient
+	errFactory *sbomerrors.SbomErrorFactory
 }
 
-var Workflow = sbomWorkflow{
-	BaseWorkflow: workflows.BaseWorkflow{
-		Name: "container sbom",
-		Flags: []flags.Flag{
-			flags.FlagSbomFormat,
+func NewSbomWorkflow(sbomClient SbomClient, errFactory *sbomerrors.SbomErrorFactory) *SbomWorkflow {
+	return &SbomWorkflow{
+		BaseWorkflow: workflows.BaseWorkflow{
+			Name: "container sbom",
+			Flags: []flags.Flag{
+				flags.FlagSbomFormat,
+			},
 		},
-	},
-	depGraph: containerdepgraph.Workflow,
+		depGraph:   containerdepgraph.Workflow,
+		sbomClient: sbomClient,
+		errFactory: errFactory,
+	}
 }
 
-func (w *sbomWorkflow) InitWorkflow(e workflow.Engine) error {
+func (w *SbomWorkflow) InitWorkflow(e workflow.Engine) error {
 	_, err := e.Register(
 		w.Identifier(),
 		w.GetConfigurationOptionsFromFlagSet(),
@@ -38,68 +46,61 @@ func (w *sbomWorkflow) InitWorkflow(e workflow.Engine) error {
 }
 
 // todo: maybe a better name for the callback function.. something like `runWorkflow`?
-func (w *sbomWorkflow) entrypoint(ictx workflow.InvocationContext, _ []workflow.Data) ([]workflow.Data, error) {
+func (w *SbomWorkflow) entrypoint(ictx workflow.InvocationContext, _ []workflow.Data) ([]workflow.Data, error) {
+	var logger = ictx.GetEnhancedLogger()
+	logger.Info().Msg("starting the sbom workflow")
+
 	var config = ictx.GetConfiguration()
-	var logger = ictx.GetLogger()
-	var errFactory = errors.NewSbomErrorFactory(logger)
 
-	logger.Println("starting the sbom workflow") // TODO: set logger prefix with workflow imageName so that we will be able to quickly get all logs related to the workflow for debugging
-
-	logger.Println("getting the sbom format")
+	logger.Debug().Msg("getting the sbom format")
 	var format = flags.FlagSbomFormat.GetFlagValue(config)
-	if err := validateSBOMFormat(format, sbomconstants.SbomValidFormats, errFactory); err != nil {
+	if err := validateSBOMFormat(format, sbomconstants.SbomValidFormats, w.errFactory); err != nil {
 		return nil, err
 	}
 
-	logger.Println("getting preferred organization id")
+	logger.Debug().Msg("getting preferred organization id")
 	orgId := config.GetString(configuration.ORGANIZATION)
 	if orgId == "" {
-		return nil, errFactory.NewEmptyOrgError()
+		return nil, w.errFactory.NewEmptyOrgError()
 	}
 
-	logger.Println("invoking depgraph workflow")
+	logger.Debug().Msg("invoking depgraph workflow")
 	depGraphs, err := ictx.GetEngine().InvokeWithConfig(w.depGraph.Identifier(), config.Clone())
 	if err != nil {
-		return nil, errFactory.NewDepGraphWorkflowError(err)
+		return nil, w.errFactory.NewDepGraphWorkflowError(err)
 	}
 
 	imageAndVersion := config.GetString(constants.ContainerTargetArgName)
 	imageName, imageVersion, err := depGraphMetadata(imageAndVersion)
 	if err != nil {
-		return nil, errFactory.NewDepGraphWorkflowError(err)
+		return nil, w.errFactory.NewDepGraphWorkflowError(err)
 	}
-	logger.Printf("image name: '%v', image version: '%v' \n", imageName, imageVersion)
 
+	logger.Debug().Msgf("image name: '%v', image version: '%v'", imageName, imageVersion)
 	depGraphsBytes, err := parseDepGraph(depGraphs)
 	if err != nil {
-		return nil, errFactory.NewDepGraphWorkflowError(err)
+		return nil, w.errFactory.NewDepGraphWorkflowError(err)
 	}
 
-	result, err := depGraphsToSBOM(
-		ictx.GetNetworkAccess().GetHttpClient(),
-		config.GetString(configuration.API_URL),
-		orgId,
-		depGraphsBytes,
-		imageName,
-		imageVersion,
-		format,
-		logger,
-		errFactory,
-	)
+	sbomResult, err := w.sbomClient.GetSbomForDepGraph(context.Background(), orgId, format, &GetSbomForDepGraphRequest{
+		DepGraphs: depGraphsBytes,
+		Subject: Subject{
+			Name:    imageName,
+			Version: imageVersion,
+		},
+	})
 	if err != nil {
 		return nil, err
 	}
 
-	logger.Println("successfully generated SBOM document")
-	return []workflow.Data{w.newDepGraphData(result)}, nil
+	logger.Info().Msg("successfully generated SBOM document")
+	return []workflow.Data{
+		workflow.NewDataFromInput(nil, w.typeIdentifier(), sbomResult.MIMEType, sbomResult.Doc),
+	}, nil
 }
 
-func (w *sbomWorkflow) typeIdentifier() workflow.Identifier {
+func (w *SbomWorkflow) typeIdentifier() workflow.Identifier {
 	return workflow.NewTypeIdentifier(w.Identifier(), constants.DataTypeSbom)
-}
-
-func (w *sbomWorkflow) newDepGraphData(res *SBOMResult) workflow.Data {
-	return workflow.NewDataFromInput(nil, w.typeIdentifier(), res.MIMEType, res.Doc)
 }
 
 func validateSBOMFormat(candidate string, sbomFormats []string, errFactory *errors.SbomErrorFactory) error {

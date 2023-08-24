@@ -2,16 +2,17 @@ package errors
 
 import (
 	"fmt"
-	containererrors "github.com/snyk/container-cli/internal/common/errors"
-	"log"
 	"strings"
+
+	"github.com/rs/zerolog"
+	containererrors "github.com/snyk/container-cli/internal/common/errors"
 )
 
 type SbomErrorFactory struct {
 	*containererrors.ErrorFactory
 }
 
-func NewSbomErrorFactory(logger *log.Logger) *SbomErrorFactory {
+func NewSbomErrorFactory(logger *zerolog.Logger) *SbomErrorFactory {
 	return &SbomErrorFactory{
 		ErrorFactory: containererrors.NewErrorFactory(logger),
 	}
