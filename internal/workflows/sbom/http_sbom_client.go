@@ -64,6 +64,7 @@ func (c *HttpSbomClient) GetSbomForDepGraph(ctx context.Context, orgId, format s
 	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusOK {
+		io.Copy(io.Discard, res.Body)
 		return nil, c.errorFromResponse(res, orgId)
 	}
 
@@ -79,12 +80,7 @@ func (c *HttpSbomClient) GetSbomForDepGraph(ctx context.Context, orgId, format s
 }
 
 func (c *HttpSbomClient) errorFromResponse(res *http.Response, orgId string) error {
-	_, err := io.Copy(io.Discard, res.Body)
-	if err != nil {
-		c.logger.Warn().Err(err).Str("orgId", orgId).Msg("failed to discard the response body for non-2XX response")
-	}
-
-	err = fmt.Errorf("could not convert to SBOM (status: %s)", res.Status)
+	err := fmt.Errorf("could not convert to SBOM (status: %s)", res.Status)
 	switch res.StatusCode {
 	case http.StatusBadRequest:
 		return c.errFactory.NewBadRequestError(err)
