@@ -75,7 +75,7 @@ func (w *sbomWorkflow) entrypoint(ictx workflow.InvocationContext, _ []workflow.
 		return nil, errFactory.NewDepGraphWorkflowError(err)
 	}
 
-	result, err := DepGraphsToSBOM(
+	result, err := depGraphsToSBOM(
 		ictx.GetNetworkAccess().GetHttpClient(),
 		config.GetString(configuration.API_URL),
 		orgId,

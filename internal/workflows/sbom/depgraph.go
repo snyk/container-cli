@@ -47,7 +47,7 @@ func parseDepGraph(depGraphs []workflow.Data) ([]json.RawMessage, error) {
 
 		depGraphBytes, ok := depGraph.GetPayload().([]byte)
 		if !ok {
-			return nil, fmt.Errorf("invalid payload type (want []byte, got %T)", depGraph.GetPayload())
+			return nil, fmt.Errorf("invalid payload type, want []byte, got %T", depGraph.GetPayload())
 		}
 		depGraphsBytes = append(depGraphsBytes, depGraphBytes)
 	}

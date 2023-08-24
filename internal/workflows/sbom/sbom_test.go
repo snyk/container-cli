@@ -120,7 +120,30 @@ func Test_Entrypoint_GivenInvalidImageReference_ShouldReturnDepGraphWorkflowErro
 	require.EqualError(t, err, errFactory.NewDepGraphWorkflowError(err).Error())
 }
 
-//func Test_Entrypoint_GivenInvalidDepGraphPayloadType_ShouldReturnDepGraphWorkflowError(t *testing.T) {
+func Test_Entrypoint_GivenInvalidDepGraphPayloadType_ShouldReturnDepGraphWorkflowError(t *testing.T) {
+	beforeEach(t)
+	defer afterEach()
+
+	mockConfig.EXPECT().GetString(flags.FlagSbomFormat.Name).Return(sbomconstants.SbomValidFormats[0])
+	mockConfig.EXPECT().GetString(configuration.ORGANIZATION).Return("aaacbb21-19b4-44f4-8483-d03746156f6b")
+	mockConfig.EXPECT().Clone().Return(configuration.NewInMemory())
+
+	mockInvocationContext.EXPECT().GetEngine().Return(mockEngine)
+
+	// a boolean payload (e.g. true) is not valid
+	invalidDepGraph := workflow.NewData(workflow.NewTypeIdentifier(workflow.NewWorkflowIdentifier("container depgraph"),
+		constants.DataTypeDepGraph), constants.ContentTypeJSON, true)
+	invalidDepGraph.SetMetaData(constants.HeaderContentLocation, "package-lock.json")
+
+	mockEngine.EXPECT().InvokeWithConfig(containerdepgraph.Workflow.Identifier(), configuration.NewInMemory()).
+		Return([]workflow.Data{invalidDepGraph}, nil)
+	mockConfig.EXPECT().GetString(constants.ContainerTargetArgName).Return("alpine:3.17.0")
+
+	_, err := sbom.entrypoint(mockInvocationContext, nil)
+	require.EqualError(t, err, errFactory.NewDepGraphWorkflowError(err).Error())
+}
+
+//func Test_Entrypoint_GivenX_ShouldY(t *testing.T) {
 //	beforeEach(t)
 //	defer afterEach()
 //
@@ -129,7 +152,12 @@ func Test_Entrypoint_GivenInvalidImageReference_ShouldReturnDepGraphWorkflowErro
 //	mockConfig.EXPECT().Clone().Return(configuration.NewInMemory())
 //
 //	mockInvocationContext.EXPECT().GetEngine().Return(mockEngine)
-//	mockEngine.EXPECT().InvokeWithConfig(containerdepgraph.Workflow.Identifier(), configuration.NewInMemory()).Return([]workflow.Data{}, nil)
+//
+//	mockEngine.EXPECT().InvokeWithConfig(containerdepgraph.Workflow.Identifier(), configuration.NewInMemory()).
+//		Return([]workflow.Data{
+//			// a boolean payload (e.g. true) is not valid
+//			workflow.NewData(workflow.NewTypeIdentifier(workflow.NewWorkflowIdentifier("container depgraph"), constants.DataTypeDepGraph), constants.ContentTypeJSON, true),
+//		}, nil)
 //	mockConfig.EXPECT().GetString(constants.ContainerTargetArgName).Return("alpine:3.17.0")
 //
 //	_, err := sbom.entrypoint(mockInvocationContext, nil)

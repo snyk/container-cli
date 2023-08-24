@@ -6,12 +6,13 @@ import (
 	"encoding/json"
 	stderr "errors"
 	"fmt"
-	"github.com/snyk/container-cli/internal/common/constants"
-	"github.com/snyk/container-cli/internal/workflows/sbom/errors"
 	"io"
 	"log"
 	"net/http"
 	"net/url"
+
+	"github.com/snyk/container-cli/internal/common/constants"
+	"github.com/snyk/container-cli/internal/workflows/sbom/errors"
 )
 
 type (
@@ -23,7 +24,7 @@ type (
 
 const apiVersion = "2022-03-31~experimental"
 
-func DepGraphsToSBOM(
+func depGraphsToSBOM(
 	client *http.Client,
 	apiURL string,
 	orgId string,
