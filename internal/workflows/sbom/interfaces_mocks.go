@@ -36,54 +36,54 @@ func (m *MockSbomClient) EXPECT() *MockSbomClientMockRecorder {
 }
 
 // GetSbomForDepGraph mocks base method.
-func (m *MockSbomClient) GetSbomForDepGraph(ctx context.Context, orgId, format string, req *GetSbomForDepGraphRequest) (*GetSbomForDepGraphResult, error) {
+func (m *MockSbomClient) GetSbomForDepGraph(arg0 context.Context, arg1, arg2 string, arg3 *GetSbomForDepGraphRequest) (*GetSbomForDepGraphResult, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetSbomForDepGraph", ctx, orgId, format, req)
+	ret := m.ctrl.Call(m, "GetSbomForDepGraph", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(*GetSbomForDepGraphResult)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetSbomForDepGraph indicates an expected call of GetSbomForDepGraph.
-func (mr *MockSbomClientMockRecorder) GetSbomForDepGraph(ctx, orgId, format, req interface{}) *gomock.Call {
+func (mr *MockSbomClientMockRecorder) GetSbomForDepGraph(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSbomForDepGraph", reflect.TypeOf((*MockSbomClient)(nil).GetSbomForDepGraph), ctx, orgId, format, req)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSbomForDepGraph", reflect.TypeOf((*MockSbomClient)(nil).GetSbomForDepGraph), arg0, arg1, arg2, arg3)
 }
 
-// MockHttpClient is a mock of HttpClient interface.
-type MockHttpClient struct {
+// MockHTTPClient is a mock of HTTPClient interface.
+type MockHTTPClient struct {
 	ctrl     *gomock.Controller
-	recorder *MockHttpClientMockRecorder
+	recorder *MockHTTPClientMockRecorder
 }
 
-// MockHttpClientMockRecorder is the mock recorder for MockHttpClient.
-type MockHttpClientMockRecorder struct {
-	mock *MockHttpClient
+// MockHTTPClientMockRecorder is the mock recorder for MockHTTPClient.
+type MockHTTPClientMockRecorder struct {
+	mock *MockHTTPClient
 }
 
-// NewMockHttpClient creates a new mock instance.
-func NewMockHttpClient(ctrl *gomock.Controller) *MockHttpClient {
-	mock := &MockHttpClient{ctrl: ctrl}
-	mock.recorder = &MockHttpClientMockRecorder{mock}
+// NewMockHTTPClient creates a new mock instance.
+func NewMockHTTPClient(ctrl *gomock.Controller) *MockHTTPClient {
+	mock := &MockHTTPClient{ctrl: ctrl}
+	mock.recorder = &MockHTTPClientMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockHttpClient) EXPECT() *MockHttpClientMockRecorder {
+func (m *MockHTTPClient) EXPECT() *MockHTTPClientMockRecorder {
 	return m.recorder
 }
 
 // Do mocks base method.
-func (m *MockHttpClient) Do(req *http.Request) (*http.Response, error) {
+func (m *MockHTTPClient) Do(arg0 *http.Request) (*http.Response, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Do", req)
+	ret := m.ctrl.Call(m, "Do", arg0)
 	ret0, _ := ret[0].(*http.Response)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Do indicates an expected call of Do.
-func (mr *MockHttpClientMockRecorder) Do(req interface{}) *gomock.Call {
+func (mr *MockHTTPClientMockRecorder) Do(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Do", reflect.TypeOf((*MockHttpClient)(nil).Do), req)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Do", reflect.TypeOf((*MockHTTPClient)(nil).Do), arg0)
 }

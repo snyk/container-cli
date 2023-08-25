@@ -16,14 +16,14 @@ import (
 )
 
 func Test_Depgraph_extractLegacyCLIError_extractError(t *testing.T) {
-	expectedMsgJson := `{
+	expectedMsgJSON := `{
 		"ok": false,
 		"error": "Hello Error",
 		"path": "/"
 	  }`
 
 	inputError := &exec.ExitError{}
-	data := workflow.NewData(Workflow.TypeIdentifier(), "application/json", []byte(expectedMsgJson))
+	data := workflow.NewData(Workflow.TypeIdentifier(), "application/json", []byte(expectedMsgJSON))
 
 	outputError := extractLegacyCLIError(inputError, []workflow.Data{data})
 

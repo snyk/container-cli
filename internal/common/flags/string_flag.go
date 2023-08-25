@@ -2,6 +2,7 @@ package flags
 
 import (
 	"fmt"
+
 	"github.com/snyk/go-application-framework/pkg/configuration"
 )
 

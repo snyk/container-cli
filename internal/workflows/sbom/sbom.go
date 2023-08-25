@@ -9,7 +9,6 @@ import (
 	"github.com/snyk/container-cli/internal/common/workflows"
 	containerdepgraph "github.com/snyk/container-cli/internal/workflows/depgraph"
 	sbomconstants "github.com/snyk/container-cli/internal/workflows/sbom/constants"
-	"github.com/snyk/container-cli/internal/workflows/sbom/errors"
 	sbomerrors "github.com/snyk/container-cli/internal/workflows/sbom/errors"
 	"github.com/snyk/go-application-framework/pkg/configuration"
 	"github.com/snyk/go-application-framework/pkg/workflow"
@@ -62,8 +61,8 @@ func (w *Workflow) entrypoint(ictx workflow.InvocationContext, _ []workflow.Data
 	}
 
 	logger.Debug().Msg("getting preferred organization id")
-	orgId := config.GetString(configuration.ORGANIZATION)
-	if orgId == "" {
+	orgID := config.GetString(configuration.ORGANIZATION)
+	if orgID == "" {
 		return nil, w.errFactory.NewEmptyOrgError()
 	}
 
@@ -85,7 +84,7 @@ func (w *Workflow) entrypoint(ictx workflow.InvocationContext, _ []workflow.Data
 		return nil, w.errFactory.NewDepGraphWorkflowError(err)
 	}
 
-	sbomResult, err := w.sbomClient.GetSbomForDepGraph(context.Background(), orgId, format, &GetSbomForDepGraphRequest{
+	sbomResult, err := w.sbomClient.GetSbomForDepGraph(context.Background(), orgID, format, &GetSbomForDepGraphRequest{
 		DepGraphs: depGraphsBytes,
 		Subject: Subject{
 			Name:    imageName,
@@ -106,12 +105,12 @@ func (w *Workflow) typeIdentifier() workflow.Identifier {
 	return workflow.NewTypeIdentifier(w.Identifier(), constants.DataTypeSbom)
 }
 
-func validateSBOMFormat(candidate string, sbomFormats []string, errFactory *errors.SbomErrorFactory) error {
+func validateSBOMFormat(candidate string, sbomFormats []string, errFactory *sbomerrors.SbomErrorFactory) error {
 	if candidate == "" {
 		return errFactory.NewEmptySbomFormatError(sbomFormats)
 	}
 
-	if slices.Contains(sbomFormats, candidate) == false {
+	if !slices.Contains(sbomFormats, candidate) {
 		return errFactory.NewInvalidSbomFormatError(candidate, sbomFormats)
 	}
 

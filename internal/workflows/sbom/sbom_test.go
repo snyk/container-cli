@@ -67,7 +67,8 @@ func Test_Entrypoint_GivenInvalidFormat_ShouldReturnInvalidSbomFormatError(t *te
 	mockConfig.EXPECT().GetString(flags.FlagSbomFormat.Name).Return(invalidSbomFormat)
 
 	_, err := sbomWorkflow.entrypoint(mockInvocationContext, nil)
-	require.EqualError(t, err, errFactory.NewInvalidSbomFormatError(invalidSbomFormat, sbomconstants.SbomValidFormats).Error())
+	require.EqualError(t, err,
+		errFactory.NewInvalidSbomFormatError(invalidSbomFormat, sbomconstants.SbomValidFormats).Error())
 }
 
 func Test_Entrypoint_GivenEmptyOrg_ShouldReturnEmptyOrgError(t *testing.T) {
@@ -88,7 +89,8 @@ func Test_Entrypoint_GivenDepGraphWorkflowError_ShouldReturnDepGraphWorkflowErro
 	mockConfig.EXPECT().GetString(flags.FlagSbomFormat.Name).Return(sbomconstants.SbomValidFormats[0])
 	mockConfig.EXPECT().GetString(configuration.ORGANIZATION).Return("aaacbb21-19b4-44f4-8483-d03746156f6b")
 
-	mockEngine.EXPECT().InvokeWithConfig(containerdepgraph.Workflow.Identifier(), configuration.NewInMemory()).Return(nil, errors.New("test error"))
+	mockEngine.EXPECT().InvokeWithConfig(containerdepgraph.Workflow.Identifier(), configuration.NewInMemory()).
+		Return(nil, errors.New("test error"))
 
 	_, err := sbomWorkflow.entrypoint(mockInvocationContext, nil)
 	require.EqualError(t, err, errFactory.NewDepGraphWorkflowError(err).Error())
@@ -100,7 +102,8 @@ func Test_Entrypoint_GivenInvalidImageReference_ShouldReturnDepGraphWorkflowErro
 
 	mockConfig.EXPECT().GetString(flags.FlagSbomFormat.Name).Return(sbomconstants.SbomValidFormats[0])
 	mockConfig.EXPECT().GetString(configuration.ORGANIZATION).Return("aaacbb21-19b4-44f4-8483-d03746156f6b")
-	mockEngine.EXPECT().InvokeWithConfig(containerdepgraph.Workflow.Identifier(), configuration.NewInMemory()).Return([]workflow.Data{}, nil)
+	mockEngine.EXPECT().InvokeWithConfig(containerdepgraph.Workflow.Identifier(), configuration.NewInMemory()).
+		Return([]workflow.Data{}, nil)
 
 	// uppercase image references are not valid
 	mockConfig.EXPECT().GetString(constants.ContainerTargetArgName).Return("AlpINE:3.17.0")

@@ -17,30 +17,38 @@ import (
 const apiVersion = "2022-03-31~experimental"
 const sbomForDepthGraphAPIEndpoint = "%s/hidden/orgs/%s/sbom?version=%s&format=%s"
 
-type HttpSbomClientConfig struct {
-	ApiUrl     string
-	HttpClient HttpClient
+// HTTPSbomClientConfig represents the configuration for HTTPSbomClient
+type HTTPSbomClientConfig struct {
+	APIHost    string
+	Client     HTTPClient
 	Logger     *zerolog.Logger
 	ErrFactory *sbomerrors.SbomErrorFactory
 }
 
-type HttpSbomClient struct {
-	apiUrl     string
-	httpClient HttpClient
+// HTTPSbomClient represents the HTTP client for the SBOM API
+type HTTPSbomClient struct {
+	apiHost    string
+	client     HTTPClient
 	logger     *zerolog.Logger
 	errFactory *sbomerrors.SbomErrorFactory
 }
 
-func NewHttpSbomClient(conf HttpSbomClientConfig) *HttpSbomClient {
-	return &HttpSbomClient{
-		apiUrl:     conf.ApiUrl,
-		httpClient: conf.HttpClient,
+// NewHTTPSbomClient creates a new HTTPSbomClient value
+func NewHTTPSbomClient(conf HTTPSbomClientConfig) *HTTPSbomClient {
+	return &HTTPSbomClient{
+		apiHost:    conf.APIHost,
+		client:     conf.Client,
 		logger:     conf.Logger,
 		errFactory: conf.ErrFactory,
 	}
 }
 
-func (c *HttpSbomClient) GetSbomForDepGraph(ctx context.Context, orgId, format string, req *GetSbomForDepGraphRequest) (*GetSbomForDepGraphResult, error) {
+// GetSbomForDepGraph retrieves the SBOM for a depgraph
+func (c *HTTPSbomClient) GetSbomForDepGraph(
+	ctx context.Context,
+	orgID, format string,
+	req *GetSbomForDepGraphRequest,
+) (*GetSbomForDepGraphResult, error) {
 	body, err := json.Marshal(req)
 	if err != nil {
 		return nil, c.errFactory.NewInternalError(fmt.Errorf("failed to marshal sbom request: %w", err))
@@ -49,7 +57,7 @@ func (c *HttpSbomClient) GetSbomForDepGraph(ctx context.Context, orgId, format s
 	httpReq, err := http.NewRequestWithContext(
 		ctx,
 		http.MethodPost,
-		fmt.Sprintf(sbomForDepthGraphAPIEndpoint, c.apiUrl, orgId, apiVersion, url.QueryEscape(format)),
+		fmt.Sprintf(sbomForDepthGraphAPIEndpoint, c.apiHost, orgID, apiVersion, url.QueryEscape(format)),
 		bytes.NewReader(body),
 	)
 	if err != nil {
@@ -57,15 +65,18 @@ func (c *HttpSbomClient) GetSbomForDepGraph(ctx context.Context, orgId, format s
 	}
 	httpReq.Header.Add(constants.HeaderContentType, constants.ContentTypeJSON)
 
-	res, err := c.httpClient.Do(httpReq)
+	res, err := c.client.Do(httpReq)
 	if err != nil {
 		return nil, c.errFactory.NewInternalError(fmt.Errorf("failed to perform http call: %w", err))
 	}
 	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusOK {
-		io.Copy(io.Discard, res.Body)
-		return nil, c.errorFromResponse(res, orgId)
+		_, err = io.Copy(io.Discard, res.Body)
+		if err != nil {
+			c.logger.Error().Err(err).Msg("failed to discard the body for unsuccessful response")
+		}
+		return nil, c.errorFromResponse(res, orgID)
 	}
 
 	doc, err := io.ReadAll(res.Body)
@@ -79,7 +90,7 @@ func (c *HttpSbomClient) GetSbomForDepGraph(ctx context.Context, orgId, format s
 	}, nil
 }
 
-func (c *HttpSbomClient) errorFromResponse(res *http.Response, orgId string) error {
+func (c *HTTPSbomClient) errorFromResponse(res *http.Response, orgID string) error {
 	err := fmt.Errorf("could not convert to SBOM (status: %s)", res.Status)
 	switch res.StatusCode {
 	case http.StatusBadRequest:
@@ -87,7 +98,7 @@ func (c *HttpSbomClient) errorFromResponse(res *http.Response, orgId string) err
 	case http.StatusUnauthorized:
 		return c.errFactory.NewUnauthorizedError(err)
 	case http.StatusForbidden:
-		return c.errFactory.NewForbiddenError(err, orgId)
+		return c.errFactory.NewForbiddenError(err, orgID)
 	default:
 		return c.errFactory.NewRemoteError(err)
 	}

@@ -73,7 +73,7 @@ func (d *DepGraphWorkflow) entrypoint(ictx workflow.InvocationContext, _ []workf
 	}
 
 	p, ok := data[0].GetPayload().([]byte)
-	if ok == false {
+	if !ok {
 		return nil, mapInternalToUserError(logger, fmt.Errorf("could not convert payload, expected []byte, get %T", data[0].GetPayload()), internalErrorMessage)
 	}
 

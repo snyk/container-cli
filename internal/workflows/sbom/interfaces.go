@@ -7,10 +7,12 @@ import (
 
 //go:generate mockgen -source=./interfaces.go -destination=./interfaces_mocks.go -package=sbom
 
+// SbomClient provides SBOM generation operations
 type SbomClient interface {
-	GetSbomForDepGraph(ctx context.Context, orgId, format string, req *GetSbomForDepGraphRequest) (*GetSbomForDepGraphResult, error)
+	GetSbomForDepGraph(context.Context, string, string, *GetSbomForDepGraphRequest) (*GetSbomForDepGraphResult, error)
 }
 
-type HttpClient interface {
-	Do(req *http.Request) (*http.Response, error)
+// HTTPClient provides HTTP client operations
+type HTTPClient interface {
+	Do(*http.Request) (*http.Response, error)
 }

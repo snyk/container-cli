@@ -1,10 +1,11 @@
 package flags_test
 
 import (
+	"testing"
+
 	"github.com/snyk/container-cli/internal/common/flags"
 	"github.com/spf13/pflag"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 func Test_InitBaseFlag_GivenName_ShouldInitBaseFlagNameAndInitNewEmptyFlagSet(t *testing.T) {
