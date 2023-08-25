@@ -47,7 +47,6 @@ func (w *Workflow) Init(e workflow.Engine) error {
 	return err
 }
 
-// todo: maybe a better name for the callback function.. something like `runWorkflow`?
 func (w *Workflow) entrypoint(ictx workflow.InvocationContext, _ []workflow.Data) ([]workflow.Data, error) {
 	var logger = ictx.GetEnhancedLogger()
 	logger.Info().Msg("starting the sbom workflow")

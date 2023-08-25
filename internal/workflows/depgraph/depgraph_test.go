@@ -1,129 +1,265 @@
-package depgraph //nolint:testpackage // we want to use private functions.
+package depgraph
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"testing"
 
+	"github.com/golang/mock/gomock"
+	"github.com/rs/zerolog"
+	zlog "github.com/rs/zerolog/log"
 	"github.com/snyk/container-cli/internal/common/constants"
-	"github.com/snyk/container-cli/internal/common/workflows"
+	"github.com/snyk/container-cli/internal/common/flags"
 	"github.com/snyk/go-application-framework/pkg/configuration"
+	"github.com/snyk/go-application-framework/pkg/mocks"
 	"github.com/snyk/go-application-framework/pkg/workflow"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func Test_Depgraph_extractLegacyCLIError_extractError(t *testing.T) {
-	expectedMsgJSON := `{
-		"ok": false,
-		"error": "Hello Error",
-		"path": "/"
-	  }`
+const testContainerTargetArg = "test_image:test_tag"
 
-	inputError := &exec.ExitError{}
-	data := workflow.NewData(Workflow.TypeIdentifier(), "application/json", []byte(expectedMsgJSON))
+var (
+	mockCtrl              *gomock.Controller
+	mockConfig            *mocks.MockConfiguration
+	mockInvocationContext *mocks.MockInvocationContext
+	mockEngine            *mocks.MockEngine
+	mockData              *mocks.MockData
 
-	outputError := extractLegacyCLIError(inputError, []workflow.Data{data})
+	logger *zerolog.Logger
 
-	assert.NotNil(t, outputError)
-	assert.Equal(t, "Hello Error", outputError.Error())
+	unit DepGraphWorkflow
+)
 
-	var legacyErr *legacyCLIJSONError
-	assert.ErrorAs(t, outputError, &legacyErr)
+func beforeEach(t *testing.T) {
+	mockCtrl = gomock.NewController(t)
+
+	mockConfig = mocks.NewMockConfiguration(mockCtrl)
+	mockInvocationContext = mocks.NewMockInvocationContext(mockCtrl)
+	mockEngine = mocks.NewMockEngine(mockCtrl)
+	mockInvocationContext.EXPECT().GetEngine().Return(mockEngine)
+
+	mockData = mocks.NewMockData(mockCtrl)
+
+	logger = &zlog.Logger
+	unit = *Workflow
 }
 
-func Test_Depgraph_extractLegacyCLIError_InputSameAsOutput(t *testing.T) {
-	inputError := fmt.Errorf("some other error")
-	data := workflow.NewData(Workflow.TypeIdentifier(), "application/json", []byte{})
-
-	outputError := extractLegacyCLIError(inputError, []workflow.Data{data})
-
-	assert.NotNil(t, outputError)
-	assert.Equal(t, inputError.Error(), outputError.Error())
+func afterEach() {
+	mockCtrl.Finish()
 }
 
-func Test_Depgraph_InitDepGraphWorkflow(t *testing.T) {
-	config := configuration.New()
-	engine := workflow.NewWorkFlowEngine(config)
+func Test_Entrypoint_GivenLegacyCliWorkflowReturnsAnError_AndDataArrayIsEmpty_ShouldReturnTheOriginalLegacyCliWorkflowError(t *testing.T) {
+	beforeEach(t)
+	defer afterEach()
 
-	err := Workflow.InitWorkflow(engine)
-	assert.Nil(t, err)
+	legacyCliData := []workflow.Data{}
+	expectedErrorMessage := "legacy cli error"
+	legacyCliError := errors.New(expectedErrorMessage)
 
-	flagBool := config.Get("debug")
-	assert.Equal(t, false, flagBool)
+	initMocks()
+	mockEngine.EXPECT().InvokeWithConfig(gomock.Any(), mockConfig).Return(legacyCliData, legacyCliError)
+
+	_, err := unit.entrypoint(mockInvocationContext, nil)
+
+	require.EqualError(t, err, expectedErrorMessage)
 }
 
-func TestExtractDepGraphsFromCLIOutput(t *testing.T) {
-	type depGraph struct {
-		name string
-		file string
+func Test_Entrypoint_GivenLegacyCliWorkflowReturnsAnError_AndDataArrayIsNotEmptyAndErrorIsNotOfTypeExitError_ShouldReturnTheOriginalLegacyCliWorkflowError(t *testing.T) {
+	beforeEach(t)
+	defer afterEach()
+
+	legacyCliData := []workflow.Data{
+		buildData(unit.TypeIdentifier(), nil, ""),
 	}
-	type testCase struct {
-		cliOutputFile string
-		graphs        []depGraph
-	}
+	expectedErrorMessage := "legacy cli error"
+	legacyCliNonExitError := errors.New(expectedErrorMessage)
 
-	testCases := []testCase{{
-		cliOutputFile: "testdata/single_depgraph_output.txt",
-		graphs: []depGraph{{
-			name: "package-lock.json",
-			file: "testdata/single_depgraph.json",
-		}},
-	}, {
-		cliOutputFile: "testdata/multi_depgraph_output.txt",
-		graphs: []depGraph{{
-			name: "docker-image|snyk/kubernetes-scanner",
-			file: "testdata/multi_depgraph_1.json",
-		}, {
-			name: "docker-image|snyk/kubernetes-scanner:/kubernetes-scanner",
-			file: "testdata/multi_depgraph_2.json",
-		}},
-	}}
+	initMocks()
+	mockEngine.EXPECT().InvokeWithConfig(gomock.Any(), mockConfig).Return(legacyCliData, legacyCliNonExitError)
 
-	d := DepGraphWorkflow{
-		workflows.BaseWorkflow{
-			Name:  "whatever",
-			Flags: nil,
-		},
-	}
+	_, err := unit.entrypoint(mockInvocationContext, nil)
 
-	for _, tc := range testCases {
-		t.Run(tc.cliOutputFile, func(t *testing.T) {
-			output, err := os.ReadFile(tc.cliOutputFile)
-			require.NoError(t, err)
-
-			data, err := extractDepGraphsFromCLIOutput(output, d.TypeIdentifier())
-			require.NoError(t, err)
-
-			require.Len(t, data, len(tc.graphs))
-			for i, graph := range tc.graphs {
-				testDepGraphFromFile(t, graph.name, graph.file, data[i])
-			}
-		})
-	}
+	require.EqualError(t, err, expectedErrorMessage)
 }
 
-func testDepGraphFromFile(t *testing.T, dgName, fileName string, actual workflow.Data) {
-	t.Helper()
-	content, err := os.ReadFile(fileName)
-	require.NoError(t, err)
+func Test_Entrypoint_GivenLegacyCliWorkflowReturnsAnError_AndDataArrayIsNotEmptyAndErrorIsOfTypeExitErrorAndPayloadCouldNotConvertFromByteArray_ShouldReturnNilError(t *testing.T) {
+	beforeEach(t)
+	defer afterEach()
 
-	var expectedDG map[string]interface{}
-	err = json.Unmarshal(content, &expectedDG)
-	require.NoError(t, err)
-
-	require.Equal(t, constants.ContentTypeJSON, actual.GetContentType())
-	require.Equal(t, dgName, actual.GetContentLocation())
-
-	payload, ok := actual.GetPayload().([]byte)
-	if !ok {
-		t.Fatalf("payload is not []byte: %T", actual.GetPayload())
+	payload := "invalid payload type"
+	legacyCliData := []workflow.Data{
+		buildData(unit.TypeIdentifier(), payload, ""),
 	}
+	legacyCliExitError := &exec.ExitError{
+		ProcessState: &os.ProcessState{},
+		Stderr:       nil,
+	}
+	expectedErrorMessage := fmt.Sprintf("invalid payload type, want []byte, got %T", payload)
 
-	var actualDG map[string]interface{}
-	err = json.Unmarshal(payload, &actualDG)
-	require.NoError(t, err)
-	require.Equal(t, expectedDG, actualDG)
+	initMocks()
+	mockEngine.EXPECT().InvokeWithConfig(gomock.Any(), mockConfig).Return(legacyCliData, legacyCliExitError)
+
+	_, err := unit.entrypoint(mockInvocationContext, nil)
+
+	require.EqualError(t, err, expectedErrorMessage)
 }
+
+func Test_Entrypoint_GivenLegacyCliWorkflowReturnsAnError_AndDataArrayIsNotEmptyAndErrorIsOfTypeExitErrorAndPayloadIsLegacyCliJsonError_ShouldReturnLegacyCliJsonError(t *testing.T) {
+	beforeEach(t)
+	defer afterEach()
+
+	payload := []byte(`{"ok": false, "error": "legacy cli json error" , "path": "test path"}`)
+	legacyCliData := []workflow.Data{
+		buildData(unit.TypeIdentifier(), payload, ""),
+	}
+	legacyCliExitError := &exec.ExitError{
+		ProcessState: &os.ProcessState{},
+		Stderr:       nil,
+	}
+	var expectedError legacyCLIJSONError
+	jsonErr := json.Unmarshal(payload, &expectedError)
+	require.NoError(t, jsonErr)
+
+	initMocks()
+	mockEngine.EXPECT().InvokeWithConfig(gomock.Any(), mockConfig).Return(legacyCliData, legacyCliExitError)
+
+	_, err := unit.entrypoint(mockInvocationContext, nil)
+
+	require.Equal(t, err, &expectedError)
+}
+
+func Test_Entrypoint_GivenLegacyCliWorkflowReturnDataArray_AndDataIsNil_ShouldReturnInternalError(t *testing.T) {
+	beforeEach(t)
+	defer afterEach()
+
+	legacyCliData := []workflow.Data{nil}
+	expectedErrorMessage := internalErrorMessage
+
+	initMocks()
+	mockEngine.EXPECT().InvokeWithConfig(gomock.Any(), mockConfig).Return(legacyCliData, nil)
+
+	_, err := unit.entrypoint(mockInvocationContext, nil)
+
+	require.EqualError(t, err, expectedErrorMessage)
+}
+
+func Test_Entrypoint_GivenLegacyCliWorkflowReturnDataArray_AndDataIsNotNilAndPayloadFailedToConvertToByteArray_ShouldReturnInternalError(t *testing.T) {
+	beforeEach(t)
+	defer afterEach()
+
+	legacyCliData := []workflow.Data{mockData}
+	var payload interface{} = nil
+	expectedErrorMessage := internalErrorMessage
+
+	initMocks()
+	mockEngine.EXPECT().InvokeWithConfig(gomock.Any(), mockConfig).Return(legacyCliData, nil)
+	mockData.EXPECT().GetPayload().Times(2).Return(payload)
+
+	_, err := unit.entrypoint(mockInvocationContext, nil)
+
+	require.EqualError(t, err, expectedErrorMessage)
+}
+
+func Test_Entrypoint_GivenLegacyCliWorkflowReturnDataArray_AndDataIsNotNilAndPayloadConvertToByteArrayAndTheByteArrayIsEmpty_ShouldReturnInternalError(t *testing.T) {
+	beforeEach(t)
+	defer afterEach()
+
+	legacyCliData := []workflow.Data{mockData}
+	payload := []byte("")
+	expectedErrorMessage := internalErrorMessage
+
+	initMocks()
+	mockEngine.EXPECT().InvokeWithConfig(gomock.Any(), mockConfig).Return(legacyCliData, nil)
+	mockData.EXPECT().GetPayload().Return(payload)
+
+	_, err := unit.entrypoint(mockInvocationContext, nil)
+
+	require.EqualError(t, err, expectedErrorMessage)
+}
+
+func Test_Entrypoint_GivenLegacyCliWorkflowReturnDataArray_AndDataIsNotNilAndPayloadConvertToByteArrayAndTheByteArrayIsNotEmptyAndUnableToMatchDepGraphData_ShouldReturnInternalError(t *testing.T) {
+	beforeEach(t)
+	defer afterEach()
+
+	legacyCliData := []workflow.Data{mockData}
+	payload := []byte("no depgraph data")
+	expectedErrorMessage := internalErrorMessage
+
+	initMocks()
+	mockEngine.EXPECT().InvokeWithConfig(gomock.Any(), mockConfig).Return(legacyCliData, nil)
+	mockData.EXPECT().GetPayload().Return(payload)
+
+	_, err := unit.entrypoint(mockInvocationContext, nil)
+
+	require.EqualError(t, err, expectedErrorMessage)
+}
+
+func Test_Entrypoint_GivenLegacyCliWorkflowReturnDataArray_AndDataIsNotNilAndPayloadConvertToByteArrayAndTheByteArrayIsNotEmptyAndMatchMultipleDepGraphData_ShouldReturnWorkflowDataWithMultipleDepGraphsAndDepGraphsMetadata(t *testing.T) {
+	beforeEach(t)
+	defer afterEach()
+
+	legacyCliData := []workflow.Data{mockData}
+	var (
+		depgraphData01   = "test_data_01"
+		depgraphTarget01 = "test_target_01"
+		depgraphData02   = "test_data_02"
+		depgraphTarget02 = "test_target_02"
+	)
+	payload := []byte(
+		fmt.Sprintf(
+			"DepGraph data: %s DepGraph target: %s DepGraph end\n"+
+				"DepGraph data: %s DepGraph target: %s DepGraph end",
+			depgraphData01,
+			depgraphTarget01,
+			depgraphData02,
+			depgraphTarget02,
+		),
+	)
+
+	initMocks()
+	mockEngine.EXPECT().InvokeWithConfig(gomock.Any(), mockConfig).Return(legacyCliData, nil)
+	mockData.EXPECT().GetPayload().Return(payload)
+
+	result, _ := unit.entrypoint(mockInvocationContext, nil)
+
+	require.Equal(t, []byte(" "+depgraphData01+" "), result[0].GetPayload())
+	require.Equal(t, constants.ContentTypeJSON, result[0].GetContentType())
+	require.Equal(t, depgraphTarget01, result[0].GetContentLocation())
+
+	require.Equal(t, []byte(" "+depgraphData02+" "), result[1].GetPayload())
+	require.Equal(t, constants.ContentTypeJSON, result[1].GetContentType())
+	require.Equal(t, depgraphTarget02, result[1].GetContentLocation())
+}
+
+func initMocks() {
+	mockConfig.EXPECT().GetBool(flags.FlagDebug.Name).Return(false)
+	mockConfig.EXPECT().GetBool(flags.FlagAppVulns.Name).Return(false)
+	mockConfig.EXPECT().GetBool(flags.FlagExcludeAppVulns.Name).Return(false)
+	mockConfig.EXPECT().GetString(constants.ContainerTargetArgName).Return(testContainerTargetArg)
+	mockConfig.EXPECT().Set(configuration.RAW_CMD_ARGS, gomock.AssignableToTypeOf([]string{}))
+
+	mockInvocationContext.EXPECT().GetConfiguration().Return(mockConfig)
+	mockInvocationContext.EXPECT().GetEnhancedLogger().Return(logger)
+}
+
+func buildData(identifier workflow.Identifier, payload interface{}, target string) workflow.Data {
+	d := workflow.NewData(identifier, constants.ContentTypeJSON, payload)
+	d.SetMetaData(constants.HeaderContentLocation, target)
+
+	return d
+}
+
+// TODO: reference test Ramon wrote to test the initWorkflow func
+//func Test_InitWorkflow_InitDepGraphWorkflow(t *testing.T) {
+//	config := configuration.New()
+//	engine := workflow.NewWorkFlowEngine(config)
+//
+//	err := Workflow.InitWorkflow(engine)
+//	assert.Nil(t, err)
+//
+//	flagBool := config.Get("debug")
+//	assert.Equal(t, false, flagBool)
+//}

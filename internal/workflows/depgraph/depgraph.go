@@ -4,10 +4,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"os/exec"
 	"regexp"
 	"strings"
+
+	"github.com/rs/zerolog"
 
 	"github.com/snyk/container-cli/internal/common/constants"
 	"github.com/snyk/container-cli/internal/common/flags"
@@ -49,46 +50,49 @@ func (d *DepGraphWorkflow) TypeIdentifier() workflow.Identifier {
 var legacyCLIID = workflow.NewWorkflowIdentifier(constants.WorkflowIdentifierLegacyCli)
 
 func (d *DepGraphWorkflow) entrypoint(ictx workflow.InvocationContext, _ []workflow.Data) ([]workflow.Data, error) {
-	// TODO: this is only tested through the integration test. We might want to add a unit-test for
-	// this :)
-	logger := ictx.GetLogger()
-	logger.SetPrefix(d.Name)
+	logger := ictx.GetEnhancedLogger()
 	config := ictx.GetConfiguration()
 
-	logger.Println("starting the depgraph workflow")
+	logger.Info().Msg("starting the depgraph workflow")
 
-	cmdArgs := buildCliCommand(d.Flags, config)
+	baseCmdArgs := []string{"container", "test", "--print-graph", "--json"}
+	cmdArgs := buildCliCommand(baseCmdArgs, d.Flags, config)
 
-	logger.Printf("cli invocation args: %v", cmdArgs)
-
+	logger.Info().Msgf("cli invocation args: %v", cmdArgs)
 	config.Set(configuration.RAW_CMD_ARGS, cmdArgs)
 	data, err := ictx.GetEngine().InvokeWithConfig(legacyCLIID, config)
 	if err != nil {
-		logger.Printf(fmt.Errorf("failed to execute depgraph legacy workflow: %w", err).Error())
-		return nil, extractLegacyCLIError(err, data)
+		// TODO: maybe log the cli error instead of general error
+		logger.Err(err).Msg("failed to execute depgraph legacy workflow")
+		return nil, extractLegacyCLIError(data, err)
 	}
 
 	if data[0] == nil {
-		return nil, mapInternalToUserError(logger, errors.New("empty depgraph legacy workflow response payload"), internalErrorMessage)
+		return nil, mapInternalToUserError(logger, errors.New("empty depgraph legacy workflow response payload"),
+			internalErrorMessage)
 	}
 
 	p, ok := data[0].GetPayload().([]byte)
 	if !ok {
-		return nil, mapInternalToUserError(logger, fmt.Errorf("could not convert payload, expected []byte, get %T", data[0].GetPayload()), internalErrorMessage)
+		return nil, mapInternalToUserError(logger, fmt.Errorf("could not convert payload, expected []byte, get %T",
+			data[0].GetPayload()), internalErrorMessage)
 	}
 
 	depGraphList, err := extractDepGraphsFromCLIOutput(p, d.TypeIdentifier())
 	if err != nil {
-		return nil, mapInternalToUserError(logger, fmt.Errorf("could not extract depGraphs from CLI output: %w", err), internalErrorMessage)
+		return nil, mapInternalToUserError(logger, fmt.Errorf("could not extract depGraphs from CLI output: %w", err),
+			internalErrorMessage)
 	}
 
-	logger.Printf("finished the depgraph workflow, number of depgraphs=%d", len(depGraphList))
+	logger.Info().Msgf("finished the depgraph workflow, number of depgraphs=%d", len(depGraphList))
 
 	return depGraphList, nil
 }
 
-func buildCliCommand(flags []flags.Flag, config configuration.Configuration) []string {
-	cmdArgs := []string{"container", "test", "--print-graph", "--json"}
+func buildCliCommand(baseCmdArgs []string, flags []flags.Flag, config configuration.Configuration) []string {
+	var cmdArgs []string
+	cmdArgs = append(cmdArgs, baseCmdArgs...)
+
 	for _, flag := range flags {
 		arg := flag.GetAsCLIArgument(config)
 		cmdArgs = append(cmdArgs, arg)
@@ -97,9 +101,6 @@ func buildCliCommand(flags []flags.Flag, config configuration.Configuration) []s
 	cmdArgs = append(cmdArgs, config.GetString(constants.ContainerTargetArgName))
 	return cmdArgs
 }
-
-// TODO: all the code until EOF could also be taken from Link's implementations / could be
-// shared.
 
 // depGraphSeparator separates the depgraph from the target name and the rest.
 // The DepGraph and the name are caught in a capturing group.
@@ -113,12 +114,12 @@ func extractDepGraphsFromCLIOutput(output []byte, typeID workflow.Identifier) ([
 	}
 
 	matches := depGraphSeparator.FindAllSubmatch(output, -1)
+	if len(matches) == 0 {
+		return nil, fmt.Errorf("malformed CLI output, got 0 matches")
+	}
+
 	depGraphs := make([]workflow.Data, 0, len(matches))
 	for _, match := range matches {
-		if len(match) != 3 {
-			return nil, fmt.Errorf("malformed CLI output, got %v matches", len(match))
-		}
-
 		data := workflow.NewData(typeID, constants.ContentTypeJSON, match[1])
 		data.SetMetaData(constants.HeaderContentLocation, strings.TrimSpace(string(match[2])))
 		depGraphs = append(depGraphs, data)
@@ -140,18 +141,18 @@ func (e *legacyCLIJSONError) Error() string {
 }
 
 // extractLegacyCLIError extracts the error message from the legacy cli if possible.
-func extractLegacyCLIError(input error, data []workflow.Data) error {
+func extractLegacyCLIError(data []workflow.Data, err error) error {
 	// if there's no data, we can't extract anything.
 	if len(data) == 0 {
-		return input
+		return err
 	}
 
 	// extract error from legacy cli if possible and wrap it in an error instance
 	var exitErr *exec.ExitError
-	if errors.As(input, &exitErr) {
+	if errors.As(err, &exitErr) {
 		bytes, ok := data[0].GetPayload().([]byte)
 		if !ok {
-			return nil
+			return fmt.Errorf("invalid payload type, want []byte, got %T", data[0].GetPayload())
 		}
 
 		var decodedError legacyCLIJSONError
@@ -159,10 +160,10 @@ func extractLegacyCLIError(input error, data []workflow.Data) error {
 			return &decodedError
 		}
 	}
-	return input
+	return err
 }
 
-func mapInternalToUserError(logger *log.Logger, err error, userMessage string) error {
-	logger.Printf(err.Error())
+func mapInternalToUserError(logger *zerolog.Logger, err error, userMessage string) error {
+	logger.Err(err).Msg("failed to execute depgraph legacy workflow")
 	return errors.New(userMessage)
 }
