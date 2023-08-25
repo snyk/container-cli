@@ -1,9 +1,9 @@
 package sbom
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
+	"os"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -27,7 +27,7 @@ var (
 	mockSbomClient        *MockSbomClient
 	errFactory            = sbomerrors.NewSbomErrorFactory(&zlog.Logger)
 
-	sbomWorkflow *SbomWorkflow
+	sbomWorkflow *Workflow
 )
 
 func beforeEach(t *testing.T) {
@@ -42,7 +42,7 @@ func beforeEach(t *testing.T) {
 	mockInvocationContext.EXPECT().GetEngine().Return(mockEngine).MaxTimes(1)
 	mockSbomClient = NewMockSbomClient(mockCtrl)
 
-	sbomWorkflow = NewSbomWorkflow(mockSbomClient, errFactory)
+	sbomWorkflow = NewWorkflow(mockSbomClient, errFactory)
 }
 
 func afterEach() {
@@ -117,7 +117,7 @@ func Test_Entrypoint_GivenInvalidDepGraphPayloadType_ShouldReturnDepGraphWorkflo
 	mockConfig.EXPECT().GetString(configuration.ORGANIZATION).Return("aaacbb21-19b4-44f4-8483-d03746156f6b")
 
 	mockEngine.EXPECT().InvokeWithConfig(containerdepgraph.Workflow.Identifier(), configuration.NewInMemory()).
-		Return([]workflow.Data{getValidDepGraph(), getInvalidDepGraph()}, nil)
+		Return([]workflow.Data{getValidDepGraph(t, "testdata/sbom_request_depgraph.json"), getInvalidDepGraph()}, nil)
 	mockConfig.EXPECT().GetString(constants.ContainerTargetArgName).Return("alpine:3.17.0")
 
 	_, err := sbomWorkflow.entrypoint(mockInvocationContext, nil)
@@ -131,32 +131,27 @@ func Test_Entrypoint_GivenSbomForDepGraphError_ShouldPropagateClientError(t *tes
 	mockConfig.EXPECT().GetString(flags.FlagSbomFormat.Name).Return(sbomconstants.SbomValidFormats[0])
 	mockConfig.EXPECT().GetString(configuration.ORGANIZATION).Return("aaacbb21-19b4-44f4-8483-d03746156f6b")
 
-	depGraphList := []workflow.Data{getValidDepGraph(), getValidDepGraph(), getValidDepGraph()}
-	var expectedDepGraphBytes []json.RawMessage
-	for _, depGraph := range depGraphList {
-		expectedDepGraphBytes = append(expectedDepGraphBytes, depGraph.GetPayload().([]byte))
+	depGraphList := []workflow.Data{
+		getValidDepGraph(t, "testdata/sbom_request_depgraph.json"),
+		getValidDepGraph(t, "testdata/sbom_request_depgraph.json"),
 	}
 
 	mockEngine.EXPECT().InvokeWithConfig(containerdepgraph.Workflow.Identifier(), configuration.NewInMemory()).
 		Return(depGraphList, nil)
 	mockConfig.EXPECT().GetString(constants.ContainerTargetArgName).Return("alpine:3.17.0")
 
-	var sbomForDepGraphReq *GetSbomForDepGraphRequest
 	mockSbomClient.EXPECT().
-		GetSbomForDepGraph(gomock.Any(), "aaacbb21-19b4-44f4-8483-d03746156f6b", sbomconstants.SbomValidFormats[0], gomock.Any()).
-		DoAndReturn(func(_ context.Context, _ string, _ string, req *GetSbomForDepGraphRequest) (*GetSbomForDepGraphResult, error) {
-			sbomForDepGraphReq = req
-			return nil, errFactory.NewInternalError(errors.New("test error"))
-		})
+		GetSbomForDepGraph(gomock.Any(), "aaacbb21-19b4-44f4-8483-d03746156f6b", sbomconstants.SbomValidFormats[0], &GetSbomForDepGraphRequest{
+			DepGraphs: getDepGraphBytes(depGraphList),
+			Subject: Subject{
+				Name:    "alpine",
+				Version: "3.17.0",
+			},
+		}).
+		Return(nil, errFactory.NewInternalError(errors.New("test error")))
 
 	_, err := sbomWorkflow.entrypoint(mockInvocationContext, nil)
 	require.EqualError(t, err, errFactory.NewInternalError(errors.New("test error")).Error())
-
-	require.Equal(t, Subject{
-		Name:    "alpine",
-		Version: "3.17.0",
-	}, sbomForDepGraphReq.Subject)
-	require.ElementsMatch(t, expectedDepGraphBytes, sbomForDepGraphReq.DepGraphs)
 }
 
 func Test_Entrypoint_GivenNoError_ShouldReturnSbomAsWorkflowData(t *testing.T) {
@@ -166,91 +161,72 @@ func Test_Entrypoint_GivenNoError_ShouldReturnSbomAsWorkflowData(t *testing.T) {
 	mockConfig.EXPECT().GetString(flags.FlagSbomFormat.Name).Return(sbomconstants.SbomValidFormats[0])
 	mockConfig.EXPECT().GetString(configuration.ORGANIZATION).Return("aaacbb21-19b4-44f4-8483-d03746156f6b")
 
-	depGraphList := []workflow.Data{getValidDepGraph(), getValidDepGraph(), getValidDepGraph()}
-	var expectedDepGraphBytes []json.RawMessage
-	for _, depGraph := range depGraphList {
-		expectedDepGraphBytes = append(expectedDepGraphBytes, depGraph.GetPayload().([]byte))
-	}
-
+	depGraphList := []workflow.Data{getValidDepGraph(t, "testdata/sbom_request_depgraph.json")}
 	mockEngine.EXPECT().InvokeWithConfig(containerdepgraph.Workflow.Identifier(), configuration.NewInMemory()).
 		Return(depGraphList, nil)
 	mockConfig.EXPECT().GetString(constants.ContainerTargetArgName).Return("alpine:3.17.0")
 
-	var sbomForDepGraphReq *GetSbomForDepGraphRequest
-	mockSbomClient.EXPECT().
-		GetSbomForDepGraph(gomock.Any(), "aaacbb21-19b4-44f4-8483-d03746156f6b", sbomconstants.SbomValidFormats[0], gomock.Any()).
-		DoAndReturn(func(_ context.Context, _ string, _ string, req *GetSbomForDepGraphRequest) (*GetSbomForDepGraphResult, error) {
-			sbomForDepGraphReq = req
-			return nil, nil
-		})
+	expectedSbomResult := GetSbomForDepGraphResult{
+		Doc:      getSbom(t, "testdata/sbom_result_doc.json"),
+		MIMEType: "application/vnd.cyclonedx+json",
+	}
+
+	mockSbomClient.EXPECT().GetSbomForDepGraph(
+		gomock.Any(),
+		"aaacbb21-19b4-44f4-8483-d03746156f6b",
+		sbomconstants.SbomValidFormats[0],
+		&GetSbomForDepGraphRequest{
+			DepGraphs: getDepGraphBytes(depGraphList),
+			Subject: Subject{
+				Name:    "alpine",
+				Version: "3.17.0",
+			},
+		}).Return(&expectedSbomResult, nil)
 
 	result, err := sbomWorkflow.entrypoint(mockInvocationContext, nil)
 	require.NoError(t, err)
-	require.ElementsMatch(t, []workflow.Data{}, result)
 
-	require.Equal(t, Subject{
-		Name:    "alpine",
-		Version: "3.17.0",
-	}, sbomForDepGraphReq.Subject)
-	require.ElementsMatch(t, expectedDepGraphBytes, sbomForDepGraphReq.DepGraphs)
+	require.Len(t, result, 1)
+	require.Equal(t, result[0].GetContentType(), expectedSbomResult.MIMEType)
+	require.Equal(t, result[0].GetPayload(), expectedSbomResult.Doc)
 }
 
 func getInvalidDepGraph() workflow.Data {
 	// a boolean payload (e.g. true) is not valid
 	invalidDepGraph := workflow.NewData(workflow.NewTypeIdentifier(workflow.NewWorkflowIdentifier("container depgraph"),
 		constants.DataTypeDepGraph), constants.ContentTypeJSON, true)
-	invalidDepGraph.SetMetaData(constants.HeaderContentLocation, "package-lock.json")
+	invalidDepGraph.SetMetaData(constants.HeaderContentLocation, "docker-image|alpine:3.17.0")
 	return invalidDepGraph
 }
 
-func getValidDepGraph() workflow.Data {
-	invalidDepGraph := workflow.NewData(
+func getValidDepGraph(t *testing.T, fileName string) workflow.Data {
+	t.Helper()
+
+	bytes, err := os.ReadFile(fileName)
+	require.NoError(t, err)
+
+	depGraph := workflow.NewData(
 		workflow.NewTypeIdentifier(workflow.NewWorkflowIdentifier("container depgraph"), constants.DataTypeDepGraph),
 		constants.ContentTypeJSON,
-		[]byte(`
-			{
-			  "schemaVersion": "1.2.0",
-			  "pkgManager": {
-				"name": "apk"
-			  },
-			  "pkgs": [
-				{
-				  "id": "docker-image|alpine:3.17.0",
-				  "info": {
-					"name": "docker-image|alpine",
-					"version": "3.17.0"
-				  }
-				},
-				{
-				  "id": "netbase@6.3",
-				  "info": {
-					"name": "netbase",
-					"version": "6.3"
-				  }
-				}
-			  ],
-			  "graph": {
-				"rootNodeId": "root-node",
-				"nodes": [
-				  {
-					"nodeId": "root-node",
-					"pkgId": "docker-image|alpine:3.17.0",
-					"deps": [
-					  {
-						"nodeId": "netbase@6.3"
-					  }
-					]
-				  },
-				  {
-					"nodeId": "netbase@6.3",
-					"pkgId": "netbase@6.3",
-					"deps": []
-				  }
-				]
-			  }
-			}
-		`),
+		bytes,
 	)
-	invalidDepGraph.SetMetaData(constants.HeaderContentLocation, "package-lock.json")
-	return invalidDepGraph
+	depGraph.SetMetaData(constants.HeaderContentLocation, "docker-image|alpine:3.17.0")
+	return depGraph
+}
+
+func getSbom(t *testing.T, fileName string) []byte {
+	t.Helper()
+
+	bytes, err := os.ReadFile(fileName)
+	require.NoError(t, err)
+
+	return bytes
+}
+
+func getDepGraphBytes(depGraphList []workflow.Data) []json.RawMessage {
+	var expectedDepGraphBytes []json.RawMessage
+	for _, depGraph := range depGraphList {
+		expectedDepGraphBytes = append(expectedDepGraphBytes, depGraph.GetPayload().([]byte))
+	}
+	return expectedDepGraphBytes
 }

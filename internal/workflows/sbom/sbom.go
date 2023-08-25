@@ -15,15 +15,17 @@ import (
 	"github.com/snyk/go-application-framework/pkg/workflow"
 )
 
-type SbomWorkflow struct {
+// Workflow represents the SBOM workflow
+type Workflow struct {
 	workflows.BaseWorkflow
 	depGraph   *containerdepgraph.DepGraphWorkflow
 	sbomClient SbomClient
 	errFactory *sbomerrors.SbomErrorFactory
 }
 
-func NewSbomWorkflow(sbomClient SbomClient, errFactory *sbomerrors.SbomErrorFactory) *SbomWorkflow {
-	return &SbomWorkflow{
+// NewWorkflow creates a new SBOM workflow value
+func NewWorkflow(sbomClient SbomClient, errFactory *sbomerrors.SbomErrorFactory) *Workflow {
+	return &Workflow{
 		BaseWorkflow: workflows.BaseWorkflow{
 			Name: "container sbom",
 			Flags: []flags.Flag{
@@ -36,7 +38,8 @@ func NewSbomWorkflow(sbomClient SbomClient, errFactory *sbomerrors.SbomErrorFact
 	}
 }
 
-func (w *SbomWorkflow) InitWorkflow(e workflow.Engine) error {
+// Init registers the workflow for the provided engine
+func (w *Workflow) Init(e workflow.Engine) error {
 	_, err := e.Register(
 		w.Identifier(),
 		w.GetConfigurationOptionsFromFlagSet(),
@@ -46,7 +49,7 @@ func (w *SbomWorkflow) InitWorkflow(e workflow.Engine) error {
 }
 
 // todo: maybe a better name for the callback function.. something like `runWorkflow`?
-func (w *SbomWorkflow) entrypoint(ictx workflow.InvocationContext, _ []workflow.Data) ([]workflow.Data, error) {
+func (w *Workflow) entrypoint(ictx workflow.InvocationContext, _ []workflow.Data) ([]workflow.Data, error) {
 	var logger = ictx.GetEnhancedLogger()
 	logger.Info().Msg("starting the sbom workflow")
 
@@ -99,7 +102,7 @@ func (w *SbomWorkflow) entrypoint(ictx workflow.InvocationContext, _ []workflow.
 	}, nil
 }
 
-func (w *SbomWorkflow) typeIdentifier() workflow.Identifier {
+func (w *Workflow) typeIdentifier() workflow.Identifier {
 	return workflow.NewTypeIdentifier(w.Identifier(), constants.DataTypeSbom)
 }
 

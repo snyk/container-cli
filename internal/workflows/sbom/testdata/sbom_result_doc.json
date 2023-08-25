@@ -1,0 +1,53 @@
+{
+  "$schema": "http://cyclonedx.org/schema/bom-1.4.schema.json",
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.4",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2023-08-25T12:34:45Z",
+    "tools": [
+      {
+        "vendor": "Snyk",
+        "name": "Snyk Container"
+      }
+    ],
+    "component": {
+      "bom-ref": "1-alpine@3.17.0",
+      "type": "container",
+      "name": "alpine",
+      "version": "3.17.0"
+    }
+  },
+  "components": [
+    {
+      "bom-ref": "1-docker-image|alpine@3.17.0",
+      "type": "library",
+      "name": "docker-image|alpine",
+      "version": "3.17.0"
+    },
+    {
+      "bom-ref": "2-testpkg@10.10",
+      "type": "library",
+      "name": "testpkg",
+      "version": "10.10"
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "1-alpine@3.17.0",
+      "dependsOn": [
+        "1-docker-image|alpine@3.17.0"
+      ]
+    },
+    {
+      "ref": "1-docker-image|alpine@3.17.0",
+      "dependsOn": [
+        "2-testpkg@10.10"
+      ]
+    },
+    {
+      "ref": "2-testpkg@10.10",
+      "dependsOn": []
+    }
+  ]
+}

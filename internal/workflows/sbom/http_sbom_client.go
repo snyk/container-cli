@@ -50,7 +50,7 @@ func (c *HttpSbomClient) GetSbomForDepGraph(ctx context.Context, orgId, format s
 		ctx,
 		http.MethodPost,
 		fmt.Sprintf(sbomForDepthGraphAPIEndpoint, c.apiUrl, orgId, apiVersion, url.QueryEscape(format)),
-		bytes.NewBuffer(body),
+		bytes.NewReader(body),
 	)
 	if err != nil {
 		return nil, c.errFactory.NewInternalError(fmt.Errorf("failed to create http request: %w", err))

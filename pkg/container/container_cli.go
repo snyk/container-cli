@@ -26,12 +26,12 @@ func Init(e workflow.Engine) error {
 func initSbomWorkflow(e workflow.Engine) error {
 	errFactory := sbomerrors.NewSbomErrorFactory(e.GetLogger())
 
-	sbomWorkflow := sbom.NewSbomWorkflow(sbom.NewHttpSbomClient(sbom.HttpSbomClientConfig{
+	sbomWorkflow := sbom.NewWorkflow(sbom.NewHttpSbomClient(sbom.HttpSbomClientConfig{
 		ApiUrl:     e.GetConfiguration().GetString(configuration.API_URL),
 		HttpClient: e.GetNetworkAccess().GetHttpClient(),
 		Logger:     e.GetLogger(),
 		ErrFactory: errFactory,
 	}), errFactory)
 
-	return sbomWorkflow.InitWorkflow(e)
+	return sbomWorkflow.Init(e)
 }
