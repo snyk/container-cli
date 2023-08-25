@@ -143,15 +143,17 @@ func Test_Entrypoint_GivenSbomForDepGraphError_ShouldPropagateClientError(t *tes
 		Return(depGraphList, nil)
 	mockConfig.EXPECT().GetString(constants.ContainerTargetArgName).Return("alpine:3.17.0")
 
-	mockSbomClient.EXPECT().
-		GetSbomForDepGraph(gomock.Any(), "aaacbb21-19b4-44f4-8483-d03746156f6b", sbomconstants.SbomValidFormats[0], &GetSbomForDepGraphRequest{
+	mockSbomClient.EXPECT().GetSbomForDepGraph(
+		gomock.Any(),
+		"aaacbb21-19b4-44f4-8483-d03746156f6b",
+		sbomconstants.SbomValidFormats[0],
+		&GetSbomForDepGraphRequest{
 			DepGraphs: getDepGraphBytes(depGraphList),
 			Subject: Subject{
 				Name:    "alpine",
 				Version: "3.17.0",
 			},
-		}).
-		Return(nil, errFactory.NewInternalError(errors.New("test error")))
+		}).Return(nil, errFactory.NewInternalError(errors.New("test error")))
 
 	_, err := sbomWorkflow.entrypoint(mockInvocationContext, nil)
 	require.EqualError(t, err, errFactory.NewInternalError(errors.New("test error")).Error())
