@@ -4,7 +4,9 @@ go 1.21
 
 require (
 	github.com/docker/distribution v2.8.2+incompatible
+	github.com/golang/mock v1.6.0
 	github.com/opencontainers/go-digest v1.0.0
+	github.com/rs/zerolog v1.29.1
 	github.com/snyk/go-application-framework v0.0.0-20230608152503-40b6d700aefa
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.8.4
@@ -14,7 +16,6 @@ require (
 	github.com/alexbrainman/sspi v0.0.0-20210105120005-909beea2cc74 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fsnotify/fsnotify v1.5.4 // indirect
-	github.com/golang/mock v1.6.0 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/hashicorp/go-uuid v1.0.3 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
@@ -32,7 +33,6 @@ require (
 	github.com/pelletier/go-toml/v2 v2.0.5 // indirect
 	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/rs/zerolog v1.29.1 // indirect
 	github.com/snyk/go-httpauth v0.0.0-20230512081507-800aedece3cb // indirect
 	github.com/spf13/afero v1.9.2 // indirect
 	github.com/spf13/cast v1.5.0 // indirect
