@@ -20,7 +20,7 @@ const sbomForDepthGraphAPIEndpoint = "%s/hidden/orgs/%s/sbom?version=%s&format=%
 // HTTPSbomClientConfig represents the configuration for HTTPSbomClient
 type HTTPSbomClientConfig struct {
 	APIHost    string
-	Client     HTTPClient
+	Client     *http.Client
 	Logger     *zerolog.Logger
 	ErrFactory *sbomerrors.SbomErrorFactory
 }
@@ -28,7 +28,7 @@ type HTTPSbomClientConfig struct {
 // HTTPSbomClient represents the HTTP client for the SBOM API
 type HTTPSbomClient struct {
 	apiHost    string
-	client     HTTPClient
+	client     *http.Client
 	logger     *zerolog.Logger
 	errFactory *sbomerrors.SbomErrorFactory
 }
