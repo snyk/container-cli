@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/rs/zerolog"
-
 	"github.com/snyk/container-cli/internal/common/constants"
 	"github.com/snyk/container-cli/internal/common/flags"
 	"github.com/snyk/container-cli/internal/common/workflows"
@@ -63,11 +62,11 @@ func (d *DepGraphWorkflow) entrypoint(ictx workflow.InvocationContext, _ []workf
 	data, err := ictx.GetEngine().InvokeWithConfig(legacyCLIID, config)
 	if err != nil {
 		// TODO: maybe log the cli error instead of general error
-		logger.Err(err).Msg("failed to execute depgraph legacy workflow")
+		logger.Error().Err(err).Msg("failed to execute depgraph legacy workflow")
 		return nil, extractLegacyCLIError(data, err)
 	}
 
-	if data[0] == nil {
+	if len(data) == 0 || data[0] == nil {
 		return nil, mapInternalToUserError(logger, errors.New("empty depgraph legacy workflow response payload"),
 			internalErrorMessage)
 	}
