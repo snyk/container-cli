@@ -2,6 +2,8 @@ package flags
 
 import (
 	"fmt"
+
+	"github.com/snyk/container-cli/internal/workflows/sbom/constants"
 	"github.com/snyk/go-application-framework/pkg/configuration"
 )
 
@@ -25,6 +27,6 @@ var (
 		"format",
 		"f",
 		"",
-		fmt.Sprintf("Specify the SBOM output format. %s", "constants.VALID_FORMARS"),
+		fmt.Sprintf("Specify the SBOM output format. %s", constants.SbomValidFormats),
 	)
 )

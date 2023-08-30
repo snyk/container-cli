@@ -1,10 +1,11 @@
 package flags_test
 
 import (
+	"testing"
+
 	"github.com/snyk/container-cli/internal/common/flags"
 	"github.com/snyk/go-application-framework/pkg/configuration"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 func Test_NewBoolFlag_GivenNameAndDefaultValueAndUsage_ShouldReturnBoolFlagWithFlagSetPopulatedWithBoolFlagAndShorthandShouldBeEmpty(t *testing.T) {

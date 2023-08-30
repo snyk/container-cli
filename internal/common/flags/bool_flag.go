@@ -2,6 +2,7 @@ package flags
 
 import (
 	"fmt"
+
 	"github.com/snyk/go-application-framework/pkg/configuration"
 )
 
@@ -30,7 +31,7 @@ func (f *BoolFlag) GetFlagValue(c configuration.Configuration) bool {
 }
 
 func (f *BoolFlag) GetAsCLIArgument(c configuration.Configuration) string {
-	if v := f.GetFlagValue(c); v == true {
+	if v := f.GetFlagValue(c); v {
 		return fmt.Sprintf("--%s", f.Name)
 	}
 

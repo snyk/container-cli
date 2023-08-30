@@ -26,7 +26,7 @@ jobs:
   "Snyk deps scan":
     resource_class: small
     docker:
-      - image: "cimg/go:1.20"
+      - image: "cimg/go:1.21.0"
     steps:
       - checkout
       - snyk/scan:
@@ -37,7 +37,7 @@ jobs:
   "Snyk code scan":
     resource_class: small
     docker:
-      - image: "cimg/go:1.20"
+      - image: "cimg/go:1.21.0"
     steps:
       - checkout
       - snyk/scan:
