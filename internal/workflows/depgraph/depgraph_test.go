@@ -131,6 +131,21 @@ func Test_Entrypoint_GivenLegacyCliWorkflowReturnsAnError_AndDataArrayIsNotEmpty
 	require.Equal(t, err, &expectedError)
 }
 
+func Test_Entrypoint_GivenLegacyCliWorkflowReturnDataArray_AndDataIsEmpty_ShouldReturnInternalError(t *testing.T) {
+	beforeEach(t)
+	defer afterEach()
+
+	legacyCliData := []workflow.Data{}
+	expectedErrorMessage := internalErrorMessage
+
+	initMocks()
+	mockEngine.EXPECT().InvokeWithConfig(gomock.Any(), mockConfig).Return(legacyCliData, nil)
+
+	_, err := unit.entrypoint(mockInvocationContext, nil)
+
+	require.EqualError(t, err, expectedErrorMessage)
+}
+
 func Test_Entrypoint_GivenLegacyCliWorkflowReturnDataArray_AndDataIsNil_ShouldReturnInternalError(t *testing.T) {
 	beforeEach(t)
 	defer afterEach()
@@ -146,7 +161,7 @@ func Test_Entrypoint_GivenLegacyCliWorkflowReturnDataArray_AndDataIsNil_ShouldRe
 	require.EqualError(t, err, expectedErrorMessage)
 }
 
-func Test_Entrypoint_GivenLegacyCliWorkflowReturnDataArray_AndDataIsNotNilAndPayloadFailedToConvertToByteArray_ShouldReturnInternalError(t *testing.T) {
+func Test_Entrypoint_GivenLegacyCliWorkflowReturnDataArray_AndDataIsNotEmptyOrNilAndPayloadFailedToConvertToByteArray_ShouldReturnInternalError(t *testing.T) {
 	beforeEach(t)
 	defer afterEach()
 
@@ -163,7 +178,7 @@ func Test_Entrypoint_GivenLegacyCliWorkflowReturnDataArray_AndDataIsNotNilAndPay
 	require.EqualError(t, err, expectedErrorMessage)
 }
 
-func Test_Entrypoint_GivenLegacyCliWorkflowReturnDataArray_AndDataIsNotNilAndPayloadConvertToByteArrayAndTheByteArrayIsEmpty_ShouldReturnInternalError(t *testing.T) {
+func Test_Entrypoint_GivenLegacyCliWorkflowReturnDataArray_AndDataIsNotEmptyOrNilAndPayloadConvertToByteArrayAndTheByteArrayIsEmpty_ShouldReturnInternalError(t *testing.T) {
 	beforeEach(t)
 	defer afterEach()
 
@@ -180,7 +195,7 @@ func Test_Entrypoint_GivenLegacyCliWorkflowReturnDataArray_AndDataIsNotNilAndPay
 	require.EqualError(t, err, expectedErrorMessage)
 }
 
-func Test_Entrypoint_GivenLegacyCliWorkflowReturnDataArray_AndDataIsNotNilAndPayloadConvertToByteArrayAndTheByteArrayIsNotEmptyAndUnableToMatchDepGraphData_ShouldReturnInternalError(t *testing.T) {
+func Test_Entrypoint_GivenLegacyCliWorkflowReturnDataArray_AndDataIsNotEmptyOrNilAndPayloadConvertToByteArrayAndTheByteArrayIsNotEmptyAndUnableToMatchDepGraphData_ShouldReturnInternalError(t *testing.T) {
 	beforeEach(t)
 	defer afterEach()
 
@@ -197,7 +212,7 @@ func Test_Entrypoint_GivenLegacyCliWorkflowReturnDataArray_AndDataIsNotNilAndPay
 	require.EqualError(t, err, expectedErrorMessage)
 }
 
-func Test_Entrypoint_GivenLegacyCliWorkflowReturnDataArray_AndDataIsNotNilAndPayloadConvertToByteArrayAndTheByteArrayIsNotEmptyAndMatchMultipleDepGraphData_ShouldReturnWorkflowDataWithMultipleDepGraphsAndDepGraphsMetadata(t *testing.T) {
+func Test_Entrypoint_GivenLegacyCliWorkflowReturnDataArray_AndDataIsNotEmptyOrNilAndPayloadConvertToByteArrayAndTheByteArrayIsNotEmptyAndMatchMultipleDepGraphData_ShouldReturnWorkflowDataWithMultipleDepGraphsAndDepGraphsMetadata(t *testing.T) {
 	beforeEach(t)
 	defer afterEach()
 
