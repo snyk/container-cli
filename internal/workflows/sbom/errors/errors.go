@@ -18,7 +18,9 @@ func NewSbomErrorFactory(logger *zerolog.Logger) *SbomErrorFactory {
 	}
 }
 
-func (ef *SbomErrorFactory) NewEmptySbomFormatError(validSbomFormats []string) *containererrors.ContainerExtensionError {
+func (ef *SbomErrorFactory) NewEmptySbomFormatError(
+	validSbomFormats []string,
+) *containererrors.ContainerExtensionError {
 	return ef.NewError(
 		fmt.Errorf("no format provided"),
 		fmt.Sprintf(
@@ -29,7 +31,9 @@ func (ef *SbomErrorFactory) NewEmptySbomFormatError(validSbomFormats []string) *
 	)
 }
 
-func (ef *SbomErrorFactory) NewInvalidSbomFormatError(invalid string, validSbomFormats []string) *containererrors.ContainerExtensionError {
+func (ef *SbomErrorFactory) NewInvalidSbomFormatError(
+	invalid string, validSbomFormats []string,
+) *containererrors.ContainerExtensionError {
 	return ef.NewError(
 		fmt.Errorf("invalid format provided (%s)", invalid),
 		fmt.Sprintf(

@@ -9,7 +9,7 @@ import (
 )
 
 func Test_InitBaseFlag_GivenName_ShouldInitBaseFlagNameAndInitNewEmptyFlagSet(t *testing.T) {
-	flagName := "test_flag_name"
+	flagName := "test_base_flag_name"
 
 	result := flags.InitBaseFlag(flagName)
 

@@ -1,6 +1,7 @@
 package flags_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/snyk/container-cli/internal/common/flags"
@@ -8,43 +9,44 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const testBoolFlagName = "test_bool_flag_name"
+const testBoolFlagDefaultValue = true
+const testBoolFlagUsage = "test_bool_flag_usage"
+
 func Test_NewBoolFlag_GivenNameAndDefaultValueAndUsage_ShouldReturnBoolFlagWithFlagSetPopulatedWithBoolFlagAndShorthandShouldBeEmpty(t *testing.T) {
-	flagName := "test_flag_name"
-	flagDefaultValue := true
-	flagUsage := "test_flag_usage"
+	result := flags.NewBoolFlag(testBoolFlagName, testBoolFlagDefaultValue, testBoolFlagUsage)
 
-	result := flags.NewBoolFlag(flagName, flagDefaultValue, flagUsage)
-
-	assertFlagSet(result, flagName, "", flagDefaultValue, flagUsage, t)
+	assertFlagSet(result, testBoolFlagName, "", testBoolFlagDefaultValue, testBoolFlagUsage, t)
 }
 
 func Test_NewShortHandBoolFlag_GivenNameAndShorthandAndDefaultValueAndUsage_ShouldReturnBoolFlagWithFlagSetPopulatedWithBoolFlag(t *testing.T) {
-	flagName := "test_flag_name"
-	flagDefaultValue := true
-	flagUsage := "test_flag_usage"
 	flagShorthand := "s"
 
-	result := flags.NewShortHandBoolFlag(flagName, flagShorthand, flagDefaultValue, flagUsage)
+	result := flags.NewShortHandBoolFlag(testBoolFlagName, flagShorthand, testBoolFlagDefaultValue, testBoolFlagUsage)
 
-	assertFlagSet(result, flagName, flagShorthand, flagDefaultValue, flagUsage, t)
+	assertFlagSet(result, testBoolFlagName, flagShorthand, testBoolFlagDefaultValue, testBoolFlagUsage, t)
 }
 
 func Test_GetAsCLIArgument_GivenBoolFlagAndConfig_ShouldReturnFlagAsCliArgument(t *testing.T) {
-	flagName := "test_flag_name"
-	flagDefaultValue := true
-	flagUsage := "test_flag_usage"
 	c := configuration.New()
 
-	unit := flags.NewBoolFlag(flagName, flagDefaultValue, flagUsage)
-	c.AddFlagSet(unit.FlagSet)
+	unit := flags.NewBoolFlag(testBoolFlagName, testBoolFlagDefaultValue, testBoolFlagUsage)
+	err := c.AddFlagSet(unit.FlagSet)
+	require.NoError(t, err)
 
 	result := unit.GetAsCLIArgument(c)
 
-	require.Equal(t, "--"+flagName, result)
+	require.Equal(t, fmt.Sprintf("--%s", testBoolFlagName), result)
 }
 
-func assertFlagSet(bf *flags.BoolFlag, expectedName string, expectedShorthand string, expectedDefaultValue bool, expectedUsage string, t *testing.T) {
-	// TODO: this is asserting the library and i wouldn't like to do this.. instead i would like to mock it and verify the fs.Bool func has called
+func assertFlagSet(
+	bf *flags.BoolFlag,
+	expectedName string,
+	expectedShorthand string,
+	expectedDefaultValue bool,
+	expectedUsage string,
+	t *testing.T,
+) {
 	require.True(t, bf.FlagSet.HasFlags())
 
 	flag := bf.FlagSet.Lookup(expectedName)

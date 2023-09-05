@@ -67,7 +67,8 @@ func (d *DepGraphWorkflow) entrypoint(ictx workflow.InvocationContext, _ []workf
 	}
 
 	if len(data) == 0 || data[0] == nil {
-		return nil, mapInternalToUserError(logger, fmt.Errorf("empty depgraph legacy workflow response payload (payload: %s)", data),
+		return nil, mapInternalToUserError(
+			logger, fmt.Errorf("empty depgraph legacy workflow response payload (payload: %s)", data),
 			internalErrorMessage)
 	}
 

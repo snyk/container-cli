@@ -43,7 +43,11 @@ func Test_GetSbomForDepGraph_GivenNoError_ShouldReturnSbom(t *testing.T) {
 	require.NoError(t, err)
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		require.Equal(t, r.URL.String(), fmt.Sprintf("/hidden/orgs/%s/sbom?version=%s&format=%s", orgID, version, url.QueryEscape(format)))
+		require.Equal(
+			t,
+			r.URL.String(),
+			fmt.Sprintf("/hidden/orgs/%s/sbom?version=%s&format=%s", orgID, version, url.QueryEscape(format)),
+		)
 
 		body, handlerErr := io.ReadAll(r.Body)
 		require.NoError(t, handlerErr)
