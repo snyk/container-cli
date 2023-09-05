@@ -268,7 +268,7 @@ func buildData(identifier workflow.Identifier, payload interface{}, target strin
 }
 
 // TODO: reference test Ramon wrote to test the initWorkflow func
-//func Test_InitWorkflow_InitDepGraphWorkflow(t *testing.T) {
+// func Test_InitWorkflow_InitDepGraphWorkflow(t *testing.T) {
 //	config := configuration.New()
 //	engine := workflow.NewWorkFlowEngine(config)
 //
