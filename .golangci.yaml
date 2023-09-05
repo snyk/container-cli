@@ -85,3 +85,8 @@ run:
     - internal/hidden/versions/embed.go
     - internal/private/versions/embed.go
     - cmd/load-testing-target-generator/data.go
+issues:
+  exclude-rules:
+    - linters:
+        - lll
+      source: "^func Test_"
