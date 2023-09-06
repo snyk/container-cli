@@ -1,82 +1,68 @@
 version: 2.1
-orbs:
-  commitlint: conventional-changelog/commitlint@1.0.0
-  go: circleci/go@1
-  snyk: snyk/snyk@1
-  prodsec: snyk/prodsec-orb@1.0
 
-commands:
-  save-build-cache:
-    steps:
-      - save_cache:
-          name: Saving Go build cache
-          key: go-build-cache-{{ .Branch }}-{{ .Revision }}
-          paths:
-            - /home/circleci/.cache/go-build
-  restore-build-cache:
-    steps:
-      - restore_cache:
-          name: Restoring Go build cache
-          keys:
-            - go-build-cache-{{ .Branch }}-{{ .Revision }}
-            - go-build-cache-{{ .Branch }}-
-            - go-build-cache-
+orbs:
+  snyk: snyk/snyk@1
+  prodsec: snyk/prodsec-orb@1
+  commitlint: conventional-changelog/commitlint@1.0
+
+go_image: &go_image
+  resource_class: medium
+  docker:
+    - image: cimg/go:1.21
+
+ndoe_image: &node_image
+  resource_class: small
+  docker:
+    - image: cimg/node:18.15
+
+branch_exclude_main: &branch_exclude_main
+  filters:
+    branches:
+      ignore: [main]
+
+branch_only_main: &branch_only_main
+  filters:
+    branches:
+      only: main
 
 jobs:
-  "Snyk deps scan":
-    resource_class: small
-    docker:
-      - image: "cimg/go:1.21.0"
+  lint:
+    <<: *go_image
+    steps:
+      - checkout
+      - run:
+          name: run lint check
+          command: make lint
+
+  unit_test:
+    <<: *go_image
+    steps:
+      - checkout
+      - run:
+          name: run unit tests
+          command: make test
+
+  snyk_dep_scan:
+    <<: *go_image
     steps:
       - checkout
       - snyk/scan:
           fail-on-issues: true
-          monitor-on-build: false # ?
-          organization: snyk-apps
+          severity-threshold: high
+          monitor-on-build: false
 
-  "Snyk code scan":
-    resource_class: small
-    docker:
-      - image: "cimg/go:1.21.0"
+  snyk_code_scan:
+    <<: *go_image
     steps:
       - checkout
       - snyk/scan:
+          command: code test
           fail-on-issues: true
-          monitor-on-build: false # ?
-          organization: snyk-apps
-
-  "Go test and lint":
-    resource_class: medium
-    executor:
-      name: go/default
-      tag: "1.21"
-    steps:
-      - checkout
-      # saving & restoring the module cache takes almost 6x longer than simply fetching the modules...
-      #- go/mod-download-cached
-      - restore-build-cache
-      - go/mod-download
-      - run:
-          command: |
-            go mod tidy
-            git diff --quiet HEAD
-      - run:
-          command: |
-            golangci-lint run -v --timeout=2m ./...
-          environment:
-            # we re-use the Go build cache as our lint-cache too.
-            GOLANGCI_LINT_CACHE: /home/circleci/.cache/go-build
-      # we're not using the go/test command from the Go orb because that uses `-count=1` as an argument.
-      # That means all tests are run every time, instead of honoring the cache.
-      - run:
-          command: |
-            go test -race ./...
-      - save-build-cache
+          severity-threshold: high
+          monitor-on-build: false
 
   semantic-release:
-    resource_class: small
-    docker:
-      - image: cimg/node:18.15
+    <<: *node_image
     steps:
       - checkout
       - run:
@@ -86,47 +72,50 @@ jobs:
 workflows:
   "Test":
     jobs:
+      - lint:
+          name: Lint
+          <<: *branch_exclude_main
+      - unit_test:
+          name: Unit Tests
+          <<: *branch_exclude_main
+      - snyk_code_scan:
+          name: Snyk Code Scan
+          context:
+            - team-lumos
+            - snyk-bot-slack
+          <<: *branch_exclude_main
+      - snyk_dep_scan:
+          name: Snyk Dependencies Scan
+          context:
+            - team-lumos
+            - snyk-bot-slack
+          <<: *branch_exclude_main
       - prodsec/secrets-scan:
-          name: "Secrets scan"
+          name: Secrets scan
           context:
             - snyk-bot-slack
           channel: lumos-alerts
-          filters:
-            branches:
-              ignore: [main]
-      - "Go test and lint":
-          filters:
-            branches:
-              ignore: [main]
-      - "Snyk code scan":
-          context: ["snyk-apps"]
-          filters:
-            branches:
-              ignore: [main]
-      - "Snyk deps scan":
-          context: ["snyk-apps"]
-          filters:
-            branches:
-              ignore: [main]
+          <<: *branch_exclude_main
       - commitlint/lint:
           name: Commit Lint
-          filters:
-            branches:
-              ignore: [main]
+          <<: *branch_exclude_main
+
   "Release":
     jobs:
-      - "Go test and lint":
+      - lint:
+          name: Lint
           filters:
             branches:
               only: main
-
+      - unit_test:
+          name: Unit Tests
+          <<: *branch_only_main
       - semantic-release:
           name: Semantic Release
           context:
             - nodejs-app-release
             - team-lumos
           requires:
-            - "Go test and lint"
-          filters:
-            branches:
-              only: main
+            - "Lint"
+            - "Unit Tests"
+          <<: *branch_only_main
