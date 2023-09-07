@@ -10,7 +10,7 @@ go_image: &go_image
   docker:
     - image: cimg/go:1.21
 
-ndoe_image: &node_image
+node_image: &node_image
   resource_class: small
   docker:
     - image: cimg/node:18.15
@@ -39,8 +39,12 @@ jobs:
     steps:
       - checkout
       - run:
-          name: run unit tests
-          command: make test
+          name: run unit tests with coverage
+          command: make coverage
+      - store_test_results:
+          path: ./coverage/
+      - store_artifacts:
+          path: ./coverage/
 
   snyk_dep_scan:
     <<: *go_image
@@ -104,9 +108,7 @@ workflows:
     jobs:
       - lint:
           name: Lint
-          filters:
-            branches:
-              only: main
+          <<: *branch_only_main
       - unit_test:
           name: Unit Tests
           <<: *branch_only_main

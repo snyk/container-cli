@@ -30,6 +30,11 @@ GOCMD=go
 GOMOD=$(GOCMD) mod
 GOBUILD=$(GOCMD) build
 GOTEST=$(GOCMD) test
+GOTOOL=$(GOCMD) tool
+
+COVERAGEDIR=coverage
+COVERAGEFILE=$(COVERAGEDIR)/coverage.out
+COVERAGEHTML=$(subst .out,.html,$(COVERAGEFILE))
 
 all: fmt lint tidy test build
 	$(info  "completed running make file for golang project")
@@ -40,7 +45,11 @@ lint:
 tidy:
 	$(GOMOD) tidy -v
 test:
-	$(GOTEST) ./... 
+	$(GOTEST) ./...
+coverage:
+	mkdir -p coverage && \
+	go run gotest.tools/gotestsum@latest --format standard-verbose --junitfile $(COVERAGEDIR)/unit-tests.xml -- -coverprofile=$(COVERAGEFILE) ./... && \
+	$(GOTOOL) cover -html=$(COVERAGEFILE) -o $(COVERAGEHTML)
 build:
 	$(GOBUILD) -v ./...
 release:
