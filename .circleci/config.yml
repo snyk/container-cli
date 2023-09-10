@@ -65,6 +65,14 @@ jobs:
           severity-threshold: high
           monitor-on-build: false
 
+  license_check:
+    <<: *go_image
+    steps:
+      - checkout
+      - run:
+          name: run license check
+          command: PARAM="--validate" make license
+
   semantic-release:
     <<: *node_image
     steps:
@@ -102,6 +110,9 @@ workflows:
           <<: *branch_exclude_main
       - commitlint/lint:
           name: Commit Lint
+          <<: *branch_exclude_main
+      - license_check:
+          name: License Check
           <<: *branch_exclude_main
 
   "Release":
