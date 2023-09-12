@@ -34,7 +34,7 @@ import (
 
 var (
 	version = "2022-03-31~experimental"
-	orgID   = "aaacbb21-19b4-44f4-8483-d03746156f6b"
+	orgID   = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
 	format  = sbomconstants.SbomValidFormats[0]
 )
 
