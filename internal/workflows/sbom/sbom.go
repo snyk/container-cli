@@ -16,7 +16,9 @@ package sbom
 
 import (
 	"context"
-	"slices"
+
+	// TODO: migrate this to `slices` package after CLI will be migrated to Go v1.21
+	"golang.org/x/exp/slices"
 
 	"github.com/snyk/container-cli/internal/common/constants"
 	"github.com/snyk/container-cli/internal/common/flags"
