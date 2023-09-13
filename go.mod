@@ -10,6 +10,7 @@ require (
 	github.com/snyk/go-application-framework v0.0.0-20230911124155-af80929f69be
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.8.4
+	golang.org/x/exp v0.0.0-20230817173708-d852ddb80c63
 )
 
 require (
