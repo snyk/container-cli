@@ -40,8 +40,6 @@ var Workflow = &DepGraphWorkflow{
 	BaseWorkflow: workflows.BaseWorkflow{
 		Name: "container depgraph",
 		Flags: []flags.Flag{
-			flags.FlagDebug,
-			flags.FlagAppVulns,
 			flags.FlagExcludeAppVulns,
 		},
 	},

@@ -213,6 +213,24 @@ func Test_Entrypoint_GivenNoError_ShouldReturnSbomAsWorkflowData(t *testing.T) {
 	require.Equal(t, result[0].GetPayload(), expectedSbomResult.Doc)
 }
 
+func Test_Init_GivenWorkflowFlags_ShouldRegisterFlagsToWorkflowAndReturnThemInConfigInsteadOfNil(t *testing.T) {
+	config := configuration.New()
+	engine := workflow.NewWorkFlowEngine(config)
+
+	sbomWorkflow := NewWorkflow(nil, nil)
+
+	err := sbomWorkflow.Init(engine)
+	require.Nil(t, err)
+
+	require.Len(t, sbomWorkflow.Flags, 2)
+
+	flagSbomFormat := config.Get(flags.FlagSbomFormat.Name)
+	require.NotNil(t, flagSbomFormat)
+
+	flagExcludeAppVulns := config.Get(flags.FlagExcludeAppVulns.Name)
+	require.NotNil(t, flagExcludeAppVulns)
+}
+
 func getInvalidDepGraph() workflow.Data {
 	// a boolean payload (e.g. true) is not valid
 	invalidDepGraph := workflow.NewData(workflow.NewTypeIdentifier(workflow.NewWorkflowIdentifier("container depgraph"),
