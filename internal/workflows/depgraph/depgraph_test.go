@@ -263,9 +263,20 @@ func Test_Entrypoint_GivenLegacyCliWorkflowReturnDataArray_AndDataIsNotEmptyOrNi
 	require.Equal(t, depgraphTarget02, result[1].GetContentLocation())
 }
 
+func Test_InitWorkflow_GivenFlags_ShouldRegisterFlagsToWorkflowAndReturnThemInConfig(t *testing.T) {
+	config := configuration.New()
+	engine := workflow.NewWorkFlowEngine(config)
+
+	err := Workflow.InitWorkflow(engine)
+	require.Nil(t, err)
+
+	require.Len(t, Workflow.Flags, 1)
+
+	flagExcludeAppVulns := config.Get(flags.FlagExcludeAppVulns.Name)
+	require.NotNil(t, flagExcludeAppVulns)
+}
+
 func initMocks() {
-	mockConfig.EXPECT().GetBool(flags.FlagDebug.Name).Return(false)
-	mockConfig.EXPECT().GetBool(flags.FlagAppVulns.Name).Return(false)
 	mockConfig.EXPECT().GetBool(flags.FlagExcludeAppVulns.Name).Return(false)
 	mockConfig.EXPECT().GetString(constants.ContainerTargetArgName).Return(testContainerTargetArg)
 	mockConfig.EXPECT().Set(configuration.RAW_CMD_ARGS, gomock.AssignableToTypeOf([]string{}))
@@ -280,15 +291,3 @@ func buildData(identifier workflow.Identifier, payload interface{}, target strin
 
 	return d
 }
-
-// TODO: reference test Ramon wrote to test the initWorkflow func
-// func Test_InitWorkflow_InitDepGraphWorkflow(t *testing.T) {
-//	config := configuration.New()
-//	engine := workflow.NewWorkFlowEngine(config)
-//
-//	err := Workflow.InitWorkflow(engine)
-//	assert.Nil(t, err)
-//
-//	flagBool := config.Get("debug")
-//	assert.Equal(t, false, flagBool)
-//}
