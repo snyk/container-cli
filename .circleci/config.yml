@@ -13,7 +13,7 @@ go_image: &go_image
 node_image: &node_image
   resource_class: small
   docker:
-    - image: cimg/node:18.15
+    - image: cimg/node:18.18.0
 
 branch_exclude_main: &branch_exclude_main
   filters:
