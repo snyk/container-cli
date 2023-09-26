@@ -1,0 +1,11 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: container-cli
+  annotations:
+    github.com/project-slug: snyk/container-cli
+    github.com/team-slug: snyk/lumos
+spec:
+  type: external-library
+  lifecycle: "-"
+  owner: lumos
