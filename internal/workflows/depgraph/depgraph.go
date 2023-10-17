@@ -23,9 +23,11 @@ import (
 	"strings"
 
 	"github.com/rs/zerolog"
+
 	"github.com/snyk/container-cli/internal/common/constants"
 	"github.com/snyk/container-cli/internal/common/flags"
 	"github.com/snyk/container-cli/internal/common/workflows"
+	depgraphErrors "github.com/snyk/container-cli/internal/workflows/depgraph/errors"
 	"github.com/snyk/go-application-framework/pkg/configuration"
 	"github.com/snyk/go-application-framework/pkg/workflow"
 )
@@ -73,27 +75,21 @@ func (d *DepGraphWorkflow) entrypoint(ictx workflow.InvocationContext, _ []workf
 	config.Set(configuration.RAW_CMD_ARGS, cmdArgs)
 	data, err := ictx.GetEngine().InvokeWithConfig(legacyCLIID, config)
 	if err != nil {
-		// TODO: maybe log the cli error instead of general error
-		logger.Error().Err(err).Msg("failed to execute depgraph legacy workflow")
-		return nil, extractLegacyCLIError(data, err)
+		return nil, logErrorAndReturn(logger, extractLegacyCLIError(data, err))
 	}
 
 	if len(data) == 0 || data[0] == nil {
-		return nil, mapInternalToUserError(
-			logger, fmt.Errorf("empty depgraph legacy workflow response payload (payload: %s)", data),
-			internalErrorMessage)
+		return nil, logErrorAndReturn(logger, depgraphErrors.NewEmptyLegacyDepGraphWorkflowPayloadResponseError(data))
 	}
 
 	p, ok := data[0].GetPayload().([]byte)
 	if !ok {
-		return nil, mapInternalToUserError(logger, fmt.Errorf("could not convert payload, expected []byte, get %T",
-			data[0].GetPayload()), internalErrorMessage)
+		return nil, logErrorAndReturn(logger, depgraphErrors.NewCouldNotConvertPayloadError(data[0].GetPayload()))
 	}
 
 	depGraphList, err := extractDepGraphsFromCLIOutput(p, d.TypeIdentifier())
 	if err != nil {
-		return nil, mapInternalToUserError(logger, fmt.Errorf("could not extract depGraphs from CLI output: %w", err),
-			internalErrorMessage)
+		return nil, logErrorAndReturn(logger, depgraphErrors.NewCouldNotExtractOutputError(err))
 	}
 
 	logger.Info().Msgf("finished the depgraph workflow, number of depgraphs=%d", len(depGraphList))
@@ -122,12 +118,12 @@ var depGraphSeparator = regexp.MustCompile(`(?s)DepGraph data:(.*?)DepGraph targ
 
 func extractDepGraphsFromCLIOutput(output []byte, typeID workflow.Identifier) ([]workflow.Data, error) {
 	if len(output) == 0 {
-		return nil, errors.New("empty output")
+		return nil, depgraphErrors.NewEmptyOutputError()
 	}
 
 	matches := depGraphSeparator.FindAllSubmatch(output, -1)
 	if len(matches) == 0 {
-		return nil, fmt.Errorf("malformed CLI output, got 0 matches")
+		return nil, depgraphErrors.NewZeroMatchesMalformedOutputError()
 	}
 
 	depGraphs := make([]workflow.Data, 0, len(matches))
@@ -175,7 +171,7 @@ func extractLegacyCLIError(data []workflow.Data, err error) error {
 	return err
 }
 
-func mapInternalToUserError(logger *zerolog.Logger, err error, userMessage string) error {
-	logger.Err(err).Msg("failed to execute depgraph legacy workflow")
-	return errors.New(userMessage)
+func logErrorAndReturn(logger *zerolog.Logger, err error) error {
+	logger.Err(err).Msg("failed to execute depgraph workflow")
+	return err
 }

@@ -157,7 +157,7 @@ func Test_Entrypoint_GivenLegacyCliWorkflowReturnDataArray_AndDataIsEmpty_Should
 
 	_, err := unit.entrypoint(mockInvocationContext, nil)
 
-	require.EqualError(t, err, expectedErrorMessage)
+	require.ErrorContains(t, err, expectedErrorMessage)
 }
 
 func Test_Entrypoint_GivenLegacyCliWorkflowReturnDataArray_AndDataIsNil_ShouldReturnInternalError(t *testing.T) {
@@ -172,7 +172,7 @@ func Test_Entrypoint_GivenLegacyCliWorkflowReturnDataArray_AndDataIsNil_ShouldRe
 
 	_, err := unit.entrypoint(mockInvocationContext, nil)
 
-	require.EqualError(t, err, expectedErrorMessage)
+	require.ErrorContains(t, err, expectedErrorMessage)
 }
 
 func Test_Entrypoint_GivenLegacyCliWorkflowReturnDataArray_AndDataIsNotEmptyOrNilAndPayloadFailedToConvertToByteArray_ShouldReturnInternalError(t *testing.T) {
@@ -189,7 +189,7 @@ func Test_Entrypoint_GivenLegacyCliWorkflowReturnDataArray_AndDataIsNotEmptyOrNi
 
 	_, err := unit.entrypoint(mockInvocationContext, nil)
 
-	require.EqualError(t, err, expectedErrorMessage)
+	require.ErrorContains(t, err, expectedErrorMessage)
 }
 
 func Test_Entrypoint_GivenLegacyCliWorkflowReturnDataArray_AndDataIsNotEmptyOrNilAndPayloadConvertToByteArrayAndTheByteArrayIsEmpty_ShouldReturnInternalError(t *testing.T) {
@@ -206,7 +206,7 @@ func Test_Entrypoint_GivenLegacyCliWorkflowReturnDataArray_AndDataIsNotEmptyOrNi
 
 	_, err := unit.entrypoint(mockInvocationContext, nil)
 
-	require.EqualError(t, err, expectedErrorMessage)
+	require.ErrorContains(t, err, expectedErrorMessage)
 }
 
 func Test_Entrypoint_GivenLegacyCliWorkflowReturnDataArray_AndDataIsNotEmptyOrNilAndPayloadConvertToByteArrayAndTheByteArrayIsNotEmptyAndUnableToMatchDepGraphData_ShouldReturnInternalError(t *testing.T) {
@@ -223,7 +223,7 @@ func Test_Entrypoint_GivenLegacyCliWorkflowReturnDataArray_AndDataIsNotEmptyOrNi
 
 	_, err := unit.entrypoint(mockInvocationContext, nil)
 
-	require.EqualError(t, err, expectedErrorMessage)
+	require.ErrorContains(t, err, expectedErrorMessage)
 }
 
 func Test_Entrypoint_GivenLegacyCliWorkflowReturnDataArray_AndDataIsNotEmptyOrNilAndPayloadConvertToByteArrayAndTheByteArrayIsNotEmptyAndMatchMultipleDepGraphData_ShouldReturnWorkflowDataWithMultipleDepGraphsAndDepGraphsMetadata(t *testing.T) {

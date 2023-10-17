@@ -14,11 +14,44 @@
 
 package errors
 
+import (
+	"errors"
+	"fmt"
+)
+
 type ContainerExtensionError struct {
-	err     error
-	userMsg string
+	err             error
+	userMsg         string
+	errCode         int
+	workflowErrCode string
 }
 
-func (xerr ContainerExtensionError) Error() string {
-	return xerr.userMsg
+func NewContainerExtensionError(
+	err error, userMsg string, errorCode int, workflowErrorCode string,
+) *ContainerExtensionError {
+	return &ContainerExtensionError{
+		err:             err,
+		userMsg:         userMsg,
+		errCode:         errorCode,
+		workflowErrCode: workflowErrorCode,
+	}
+}
+
+func (xerr *ContainerExtensionError) Error() string {
+	result := xerr.userMsg
+	if xerr.workflowErrCode != "" {
+		result += fmt.Sprintf(" [ERR#%s]", xerr.fullErrorCode())
+	}
+
+	return result
+}
+
+func (xerr *ContainerExtensionError) fullErrorCode() string {
+	prevErrCode := ""
+	var prevErr *ContainerExtensionError
+	if errors.As(xerr.err, &prevErr) {
+		prevErrCode = "+" + prevErr.fullErrorCode()
+	}
+
+	return fmt.Sprintf("%s%d%s", xerr.workflowErrCode, xerr.errCode, prevErrCode)
 }
