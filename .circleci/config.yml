@@ -123,12 +123,3 @@ workflows:
       - unit_test:
           name: Unit Tests
           <<: *branch_only_main
-      - semantic-release:
-          name: Semantic Release
-          context:
-            - nodejs-app-release
-            - team-lumos
-          requires:
-            - "Lint"
-            - "Unit Tests"
-          <<: *branch_only_main
