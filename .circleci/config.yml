@@ -88,7 +88,7 @@ workflows:
           name: Lint
           <<: *branch_exclude_main
       - unit_test:
-          name: Unit Tests
+          name: Unit Tests + Coverage
           <<: *branch_exclude_main
       - snyk_code_scan:
           name: Snyk Code Scan
@@ -121,5 +121,5 @@ workflows:
           name: Lint
           <<: *branch_only_main
       - unit_test:
-          name: Unit Tests
+          name: Unit Tests + Coverage
           <<: *branch_only_main

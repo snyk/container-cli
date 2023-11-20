@@ -48,9 +48,7 @@ test:
 	$(GOTEST) ./...
 .PHONY: coverage
 coverage:
-	mkdir -p coverage && \
-	go run gotest.tools/gotestsum@latest --format standard-verbose --junitfile $(COVERAGEDIR)/unit-tests.xml -- -coverprofile=$(COVERAGEFILE) ./... && \
-	$(GOTOOL) cover -html=$(COVERAGEFILE) -o $(COVERAGEHTML)
+	./scripts/coverage.sh
 .PHONY: license
 license:
 	./scripts/license.py $(PARAM)
