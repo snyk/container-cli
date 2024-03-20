@@ -110,6 +110,7 @@ workflows:
           <<: *branch_exclude_main
       - commitlint/lint:
           name: Commit Lint
+          node-version: 20.11.1
           <<: *branch_exclude_main
       - license_check:
           name: License Check
