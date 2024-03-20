@@ -93,20 +93,20 @@ workflows:
       - snyk_code_scan:
           name: Snyk Code Scan
           context:
-            - team-lumos
+            - team-unify
             - snyk-bot-slack
           <<: *branch_exclude_main
       - snyk_dep_scan:
           name: Snyk Dependencies Scan
           context:
-            - team-lumos
+            - team-unify
             - snyk-bot-slack
           <<: *branch_exclude_main
       - prodsec/secrets-scan:
           name: Secrets scan
           context:
             - snyk-bot-slack
-          channel: lumos-alerts
+          channel: team-unify-alerts
           <<: *branch_exclude_main
       - commitlint/lint:
           name: Commit Lint

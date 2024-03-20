@@ -4,8 +4,8 @@ metadata:
   name: container-cli
   annotations:
     github.com/project-slug: snyk/container-cli
-    github.com/team-slug: snyk/lumos
+    github.com/team-slug: snyk/unify
 spec:
   type: external-library
   lifecycle: "-"
-  owner: lumos
+  owner: unify
