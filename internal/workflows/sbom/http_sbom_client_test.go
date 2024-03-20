@@ -35,58 +35,75 @@ import (
 var (
 	version = "2022-03-31~experimental"
 	orgID   = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
-	format  = sbomconstants.SbomValidFormats[0]
 )
 
 func Test_GetSbomForDepGraph_GivenNoError_ShouldReturnSbom(t *testing.T) {
-	depGraphBytes, err := os.ReadFile("testdata/sbom_request_depgraph.json")
-	require.NoError(t, err)
+	type test struct {
+		format string
+	}
 
-	req := GetSbomForDepGraphRequest{
-		DepGraphs: []json.RawMessage{depGraphBytes},
-		Subject: Subject{
-			Name:    "alpine",
-			Version: "3.17.0",
+	tests := map[string]test{
+		"CycloneDX 1.4 JSON": {
+			format: "cyclonedx1.4+json",
+		}, "CycloneDX 1.5 JSON": {
+			format: "cyclonedx1.5+json",
 		},
 	}
 
-	expectedReqBody, err := json.Marshal(&req)
-	require.NoError(t, err)
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			require.Contains(t, sbomconstants.SbomValidFormats, tc.format)
 
-	expectedResBody, err := os.ReadFile("testdata/sbom_result_doc.json")
-	require.NoError(t, err)
+			depGraphBytes, err := os.ReadFile("testdata/sbom_request_depgraph.json")
+			require.NoError(t, err)
 
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		require.Equal(
-			t,
-			r.URL.String(),
-			fmt.Sprintf("/hidden/orgs/%s/sbom?version=%s&format=%s", orgID, version, url.QueryEscape(format)),
-		)
+			req := GetSbomForDepGraphRequest{
+				DepGraphs: []json.RawMessage{depGraphBytes},
+				Subject: Subject{
+					Name:    "alpine",
+					Version: "3.17.0",
+				},
+			}
 
-		body, handlerErr := io.ReadAll(r.Body)
-		require.NoError(t, handlerErr)
+			expectedReqBody, err := json.Marshal(&req)
+			require.NoError(t, err)
 
-		require.Equal(t, expectedReqBody, body)
+			expectedResBody, err := os.ReadFile("testdata/sbom_result_doc.json")
+			require.NoError(t, err)
 
-		w.Header().Add(constants.HeaderContentType, constants.ContentTypeJSON)
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				require.Equal(
+					t,
+					r.URL.String(),
+					fmt.Sprintf("/hidden/orgs/%s/sbom?version=%s&format=%s", orgID, version, url.QueryEscape(tc.format)),
+				)
 
-		_, handlerErr = w.Write(expectedResBody)
-		require.NoError(t, handlerErr)
-	}))
-	defer server.Close()
+				body, handlerErr := io.ReadAll(r.Body)
+				require.NoError(t, handlerErr)
 
-	client := NewHTTPSbomClient(HTTPSbomClientConfig{
-		APIHost:    server.URL,
-		Client:     http.DefaultClient,
-		Logger:     &zlog.Logger,
-		ErrFactory: sbomerrors.NewSbomErrorFactory(&zlog.Logger),
-	})
+				require.Equal(t, expectedReqBody, body)
 
-	res, err := client.GetSbomForDepGraph(context.Background(), orgID, format, &req)
-	require.NoError(t, err)
+				w.Header().Add(constants.HeaderContentType, constants.ContentTypeJSON)
 
-	require.Equal(t, &GetSbomForDepGraphResult{
-		Doc:      expectedResBody,
-		MIMEType: constants.ContentTypeJSON,
-	}, res)
+				_, handlerErr = w.Write(expectedResBody)
+				require.NoError(t, handlerErr)
+			}))
+			defer server.Close()
+
+			client := NewHTTPSbomClient(HTTPSbomClientConfig{
+				APIHost:    server.URL,
+				Client:     http.DefaultClient,
+				Logger:     &zlog.Logger,
+				ErrFactory: sbomerrors.NewSbomErrorFactory(&zlog.Logger),
+			})
+
+			res, err := client.GetSbomForDepGraph(context.Background(), orgID, tc.format, &req)
+			require.NoError(t, err)
+
+			require.Equal(t, &GetSbomForDepGraphResult{
+				Doc:      expectedResBody,
+				MIMEType: constants.ContentTypeJSON,
+			}, res)
+		})
+	}
 }

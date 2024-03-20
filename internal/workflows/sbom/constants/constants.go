@@ -17,5 +17,7 @@ package constants
 var SbomValidFormats = []string{
 	"cyclonedx1.4+json",
 	"cyclonedx1.4+xml",
+	"cyclonedx1.5+json",
+	"cyclonedx1.5+xml",
 	"spdx2.3+json",
 }

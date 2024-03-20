@@ -1,0 +1,28 @@
+{
+  "$schema": "http://cyclonedx.org/schema/bom-1.5.schema.json",
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "serialNumber": "<<SERIAL_NUMBER>>",
+  "version": 1,
+  "metadata": {
+    "timestamp": "<<TIMESTAMP>>",
+    "tools": {
+      "services": [
+        {
+          "provider": {
+            "name": "Snyk"
+          },
+          "name": "Snyk Container"
+          "version": "1.0.0"
+        }
+      ]
+    },
+    "component": {
+      "bom-ref": "1-alpine@3.17.0",
+      "type": "container",
+      "name": "alpine",
+      "version": "3.17.0"
+      "purl": "pkg:apk/alpine/containers-common@0.50.1-r0?distro=3.17.2"
+    }
+  }
+}
