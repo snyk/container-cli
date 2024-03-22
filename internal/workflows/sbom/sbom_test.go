@@ -145,72 +145,110 @@ func Test_Entrypoint_GivenInvalidDepGraphPayloadType_ShouldReturnDepGraphWorkflo
 }
 
 func Test_Entrypoint_GivenSbomForDepGraphError_ShouldPropagateClientError(t *testing.T) {
-	beforeEach(t)
-	defer afterEach()
-
-	mockConfig.EXPECT().GetString(flags.FlagSbomFormat.Name).Return(sbomconstants.SbomValidFormats[0])
-	mockConfig.EXPECT().GetString(configuration.ORGANIZATION).Return("aaacbb21-19b4-44f4-8483-d03746156f6b")
-
-	depGraphList := []workflow.Data{
-		getValidDepGraph(t, "testdata/sbom_request_depgraph.json"),
-		getValidDepGraph(t, "testdata/sbom_request_depgraph.json"),
+	type test struct {
+		format string
 	}
 
-	mockEngine.EXPECT().InvokeWithConfig(containerdepgraph.Workflow.Identifier(), configuration.NewInMemory()).
-		Return(depGraphList, nil)
-	mockConfig.EXPECT().GetString(constants.ContainerTargetArgName).Return("alpine:3.17.0")
+	tests := map[string]test{
+		"CycloneDX 1.4 JSON": {
+			format: "cyclonedx1.4+json",
+		}, "CycloneDX 1.5 JSON": {
+			format: "cyclonedx1.5+json",
+		},
+	}
 
-	mockSbomClient.EXPECT().GetSbomForDepGraph(
-		gomock.Any(),
-		"aaacbb21-19b4-44f4-8483-d03746156f6b",
-		sbomconstants.SbomValidFormats[0],
-		&GetSbomForDepGraphRequest{
-			DepGraphs: getDepGraphBytes(depGraphList),
-			Subject: Subject{
-				Name:    "alpine",
-				Version: "3.17.0",
-			},
-		}).Return(nil, errFactory.NewInternalError(errors.New("test error")))
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			beforeEach(t)
+			defer afterEach()
 
-	_, err := sbomWorkflow.entrypoint(mockInvocationContext, nil)
-	require.EqualError(t, err, errFactory.NewInternalError(errors.New("test error")).Error())
+			require.Contains(t, sbomconstants.SbomValidFormats, tc.format)
+
+			mockConfig.EXPECT().GetString(flags.FlagSbomFormat.Name).Return(tc.format)
+			mockConfig.EXPECT().GetString(configuration.ORGANIZATION).Return("aaacbb21-19b4-44f4-8483-d03746156f6b")
+
+			depGraphList := []workflow.Data{
+				getValidDepGraph(t, "testdata/sbom_request_depgraph.json"),
+				getValidDepGraph(t, "testdata/sbom_request_depgraph.json"),
+			}
+
+			mockEngine.EXPECT().InvokeWithConfig(containerdepgraph.Workflow.Identifier(), configuration.NewInMemory()).
+				Return(depGraphList, nil)
+			mockConfig.EXPECT().GetString(constants.ContainerTargetArgName).Return("alpine:3.17.0")
+
+			mockSbomClient.EXPECT().GetSbomForDepGraph(
+				gomock.Any(),
+				"aaacbb21-19b4-44f4-8483-d03746156f6b",
+				tc.format,
+				&GetSbomForDepGraphRequest{
+					DepGraphs: getDepGraphBytes(depGraphList),
+					Subject: Subject{
+						Name:    "alpine",
+						Version: "3.17.0",
+					},
+				}).Return(nil, errFactory.NewInternalError(errors.New("test error")))
+
+			_, err := sbomWorkflow.entrypoint(mockInvocationContext, nil)
+			require.EqualError(t, err, errFactory.NewInternalError(errors.New("test error")).Error())
+		})
+	}
 }
 
 func Test_Entrypoint_GivenNoError_ShouldReturnSbomAsWorkflowData(t *testing.T) {
-	beforeEach(t)
-	defer afterEach()
-
-	mockConfig.EXPECT().GetString(flags.FlagSbomFormat.Name).Return(sbomconstants.SbomValidFormats[0])
-	mockConfig.EXPECT().GetString(configuration.ORGANIZATION).Return("aaacbb21-19b4-44f4-8483-d03746156f6b")
-
-	depGraphList := []workflow.Data{getValidDepGraph(t, "testdata/sbom_request_depgraph.json")}
-	mockEngine.EXPECT().InvokeWithConfig(containerdepgraph.Workflow.Identifier(), configuration.NewInMemory()).
-		Return(depGraphList, nil)
-	mockConfig.EXPECT().GetString(constants.ContainerTargetArgName).Return("alpine:3.17.0")
-
-	expectedSbomResult := GetSbomForDepGraphResult{
-		Doc:      getSbom(t, "testdata/sbom_result_doc.json"),
-		MIMEType: "application/vnd.cyclonedx+json",
+	type test struct {
+		format, expectedDoc string
 	}
 
-	mockSbomClient.EXPECT().GetSbomForDepGraph(
-		gomock.Any(),
-		"aaacbb21-19b4-44f4-8483-d03746156f6b",
-		sbomconstants.SbomValidFormats[0],
-		&GetSbomForDepGraphRequest{
-			DepGraphs: getDepGraphBytes(depGraphList),
-			Subject: Subject{
-				Name:    "alpine",
-				Version: "3.17.0",
-			},
-		}).Return(&expectedSbomResult, nil)
+	tests := map[string]test{
+		"CycloneDX 1.4 JSON": {
+			format:      "cyclonedx1.4+json",
+			expectedDoc: "testdata/sbom_result_doc.json",
+		}, "CycloneDX 1.5 JSON": {
+			format:      "cyclonedx1.5+json",
+			expectedDoc: "testdata/sbom_result_doc_cyclonedx_15.json",
+		},
+	}
 
-	result, err := sbomWorkflow.entrypoint(mockInvocationContext, nil)
-	require.NoError(t, err)
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			beforeEach(t)
+			defer afterEach()
 
-	require.Len(t, result, 1)
-	require.Equal(t, result[0].GetContentType(), expectedSbomResult.MIMEType)
-	require.Equal(t, result[0].GetPayload(), expectedSbomResult.Doc)
+			require.Contains(t, sbomconstants.SbomValidFormats, tc.format)
+
+			mockConfig.EXPECT().GetString(flags.FlagSbomFormat.Name).Return(tc.format)
+			mockConfig.EXPECT().GetString(configuration.ORGANIZATION).Return("aaacbb21-19b4-44f4-8483-d03746156f6b")
+
+			depGraphList := []workflow.Data{getValidDepGraph(t, "testdata/sbom_request_depgraph.json")}
+			mockEngine.EXPECT().InvokeWithConfig(containerdepgraph.Workflow.Identifier(), configuration.NewInMemory()).
+				Return(depGraphList, nil)
+			mockConfig.EXPECT().GetString(constants.ContainerTargetArgName).Return("alpine:3.17.0")
+
+			expectedSbomResult := GetSbomForDepGraphResult{
+				Doc:      getSbom(t, tc.expectedDoc),
+				MIMEType: "application/vnd.cyclonedx+json",
+			}
+
+			mockSbomClient.EXPECT().GetSbomForDepGraph(
+				gomock.Any(),
+				"aaacbb21-19b4-44f4-8483-d03746156f6b",
+				tc.format,
+				&GetSbomForDepGraphRequest{
+					DepGraphs: getDepGraphBytes(depGraphList),
+					Subject: Subject{
+						Name:    "alpine",
+						Version: "3.17.0",
+					},
+				}).Return(&expectedSbomResult, nil)
+
+			result, err := sbomWorkflow.entrypoint(mockInvocationContext, nil)
+			require.NoError(t, err)
+
+			require.Len(t, result, 1)
+			require.Equal(t, result[0].GetContentType(), expectedSbomResult.MIMEType)
+			require.Equal(t, result[0].GetPayload(), expectedSbomResult.Doc)
+		})
+	}
 }
 
 func Test_Init_GivenWorkflowFlags_ShouldRegisterFlagsToWorkflowAndReturnThemInConfigInsteadOfNil(t *testing.T) {
