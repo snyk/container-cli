@@ -24,6 +24,12 @@ import (
 )
 
 func depGraphMetadata(imgName string) (name, version string, err error) {
+	// If the scan is on archive files
+	imgType := GetImageType(imgName)
+	if imgType == DockerArchive || imgType == OciArchive {
+		imgName, version = GetImageAndVersionFromFilePath(imgName)
+		return imgName, version, nil
+	}
 	// we currently don't have a way of extracting the clean image name & potentially a digest from
 	// the DepGraph output, so we use what's been passed on the command line.
 	ref, err := reference.Parse(imgName)
