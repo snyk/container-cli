@@ -1,7 +1,6 @@
 version: 2.1
 
 orbs:
-  snyk: snyk/snyk@1
   prodsec: snyk/prodsec-orb@1
   commitlint: conventional-changelog/commitlint@1.0
 
@@ -26,6 +25,14 @@ branch_only_main: &branch_only_main
       only: main
 
 jobs:
+  security-scans:
+    <<: *go_image
+    steps:
+      - checkout
+      - prodsec/security_scans:
+          mode: auto
+          iac-scan: disabled
+
   lint:
     <<: *go_image
     steps:
@@ -45,25 +52,6 @@ jobs:
           path: ./coverage/
       - store_artifacts:
           path: ./coverage/
-
-  snyk_dep_scan:
-    <<: *go_image
-    steps:
-      - checkout
-      - snyk/scan:
-          fail-on-issues: true
-          severity-threshold: high
-          monitor-on-build: false
-
-  snyk_code_scan:
-    <<: *go_image
-    steps:
-      - checkout
-      - snyk/scan:
-          command: code test
-          fail-on-issues: true
-          severity-threshold: high
-          monitor-on-build: false
 
   license_check:
     <<: *go_image
@@ -87,20 +75,12 @@ workflows:
       - lint:
           name: Lint
           <<: *branch_exclude_main
+      - security-scans:
+          name: Security Scans
+          context: analysis_unify
+          <<: *branch_exclude_main
       - unit_test:
           name: Unit Tests + Coverage
-          <<: *branch_exclude_main
-      - snyk_code_scan:
-          name: Snyk Code Scan
-          context:
-            - team-unify
-            - snyk-bot-slack
-          <<: *branch_exclude_main
-      - snyk_dep_scan:
-          name: Snyk Dependencies Scan
-          context:
-            - team-unify
-            - snyk-bot-slack
           <<: *branch_exclude_main
       - prodsec/secrets-scan:
           name: Secrets scan
@@ -118,6 +98,10 @@ workflows:
 
   "Release":
     jobs:
+      - security-scans:
+          name: Security Scans
+          context: analysis_unify
+          <<: *branch_only_main
       - lint:
           name: Lint
           <<: *branch_only_main
