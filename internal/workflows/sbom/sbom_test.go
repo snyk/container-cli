@@ -154,6 +154,8 @@ func Test_Entrypoint_GivenSbomForDepGraphError_ShouldPropagateClientError(t *tes
 			format: "cyclonedx1.4+json",
 		}, "CycloneDX 1.5 JSON": {
 			format: "cyclonedx1.5+json",
+		}, "CycloneDX 1.6 JSON": {
+			format: "cyclonedx1.6+json",
 		},
 	}
 
@@ -206,6 +208,9 @@ func Test_Entrypoint_GivenNoError_ShouldReturnSbomAsWorkflowData(t *testing.T) {
 		}, "CycloneDX 1.5 JSON": {
 			format:      "cyclonedx1.5+json",
 			expectedDoc: "testdata/sbom_result_doc_cyclonedx_15.json",
+		}, "CycloneDX 1.6 JSON": {
+			format:      "cyclonedx1.6+json",
+			expectedDoc: "testdata/sbom_result_doc_cyclonedx_16.json",
 		},
 	}
 
