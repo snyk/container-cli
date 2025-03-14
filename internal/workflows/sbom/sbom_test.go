@@ -31,6 +31,7 @@ import (
 	"github.com/snyk/go-application-framework/pkg/mocks"
 	"github.com/snyk/go-application-framework/pkg/workflow"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/exp/slices"
 )
 
 var (
@@ -93,6 +94,7 @@ func Test_Entrypoint_GivenEmptyOrg_ShouldReturnEmptyOrgError(t *testing.T) {
 	defer afterEach()
 
 	mockConfig.EXPECT().GetString(flags.FlagSbomFormat.Name).Return(sbomconstants.SbomValidFormats[0])
+	mockConfig.EXPECT().GetString(flags.FlagPlatform.Name).Return("")
 	mockConfig.EXPECT().GetString(configuration.ORGANIZATION).Return("")
 
 	_, err := sbomWorkflow.entrypoint(mockInvocationContext, nil)
@@ -105,6 +107,7 @@ func Test_Entrypoint_GivenDepGraphWorkflowError_ShouldReturnDepGraphWorkflowErro
 
 	mockConfig.EXPECT().GetString(flags.FlagSbomFormat.Name).Return(sbomconstants.SbomValidFormats[0])
 	mockConfig.EXPECT().GetString(configuration.ORGANIZATION).Return("aaacbb21-19b4-44f4-8483-d03746156f6b")
+	mockConfig.EXPECT().GetString(flags.FlagPlatform.Name).Return("")
 
 	mockEngine.EXPECT().InvokeWithConfig(containerdepgraph.Workflow.Identifier(), configuration.NewInMemory()).
 		Return(nil, errors.New("test error"))
@@ -118,6 +121,7 @@ func Test_Entrypoint_GivenInvalidImageReference_ShouldReturnDepGraphWorkflowErro
 	defer afterEach()
 
 	mockConfig.EXPECT().GetString(flags.FlagSbomFormat.Name).Return(sbomconstants.SbomValidFormats[0])
+	mockConfig.EXPECT().GetString(flags.FlagPlatform.Name).Return("")
 	mockConfig.EXPECT().GetString(configuration.ORGANIZATION).Return("aaacbb21-19b4-44f4-8483-d03746156f6b")
 	mockEngine.EXPECT().InvokeWithConfig(containerdepgraph.Workflow.Identifier(), configuration.NewInMemory()).
 		Return([]workflow.Data{}, nil)
@@ -134,6 +138,7 @@ func Test_Entrypoint_GivenInvalidDepGraphPayloadType_ShouldReturnDepGraphWorkflo
 	defer afterEach()
 
 	mockConfig.EXPECT().GetString(flags.FlagSbomFormat.Name).Return(sbomconstants.SbomValidFormats[0])
+	mockConfig.EXPECT().GetString(flags.FlagPlatform.Name).Return("")
 	mockConfig.EXPECT().GetString(configuration.ORGANIZATION).Return("aaacbb21-19b4-44f4-8483-d03746156f6b")
 
 	mockEngine.EXPECT().InvokeWithConfig(containerdepgraph.Workflow.Identifier(), configuration.NewInMemory()).
@@ -166,8 +171,10 @@ func Test_Entrypoint_GivenSbomForDepGraphError_ShouldPropagateClientError(t *tes
 			defer afterEach()
 
 			require.Contains(t, sbomconstants.SbomValidFormats, tc.format)
+			require.True(t, tc.platform == "" || slices.Contains(sbomconstants.ValidPlatforms, tc.platform))
 
 			mockConfig.EXPECT().GetString(flags.FlagSbomFormat.Name).Return(tc.format)
+			mockConfig.EXPECT().GetString(flags.FlagPlatform.Name).Return(tc.platform)
 			mockConfig.EXPECT().GetString(configuration.ORGANIZATION).Return("aaacbb21-19b4-44f4-8483-d03746156f6b")
 
 			depGraphList := []workflow.Data{
@@ -207,11 +214,28 @@ func Test_Entrypoint_GivenNoError_ShouldReturnSbomAsWorkflowData(t *testing.T) {
 		"CycloneDX 1.4 JSON": {
 			format:      "cyclonedx1.4+json",
 			expectedDoc: "testdata/sbom_result_doc.json",
-		}, "CycloneDX 1.5 JSON": {
+		},
+		"CycloneDX 1.5 JSON": {
 			format:      "cyclonedx1.5+json",
 			expectedDoc: "testdata/sbom_result_doc_cyclonedx_15.json",
-		}, "CycloneDX 1.6 JSON": {
+		},
+		"CycloneDX 1.6 JSON": {
 			format:      "cyclonedx1.6+json",
+			expectedDoc: "testdata/sbom_result_doc_cyclonedx_16.json",
+		},
+		"linux/amd64 CycloneDX 1.6 JSON": {
+			format:      "cyclonedx1.6+json",
+			platform:    "linux/amd64",
+			expectedDoc: "testdata/sbom_result_doc_cyclonedx_16.json",
+		},
+		"linux/riscv64 CycloneDX 1.6 JSON": {
+			format:      "cyclonedx1.6+json",
+			platform:    "linux/riscv64",
+			expectedDoc: "testdata/sbom_result_doc_cyclonedx_16.json",
+		},
+		"linux/386 CycloneDX 1.6 JSON": {
+			format:      "cyclonedx1.6+json",
+			platform:    "linux/386",
 			expectedDoc: "testdata/sbom_result_doc_cyclonedx_16.json",
 		},
 	}
@@ -222,8 +246,10 @@ func Test_Entrypoint_GivenNoError_ShouldReturnSbomAsWorkflowData(t *testing.T) {
 			defer afterEach()
 
 			require.Contains(t, sbomconstants.SbomValidFormats, tc.format)
+			require.True(t, tc.platform == "" || slices.Contains(sbomconstants.ValidPlatforms, tc.platform))
 
 			mockConfig.EXPECT().GetString(flags.FlagSbomFormat.Name).Return(tc.format)
+			mockConfig.EXPECT().GetString(flags.FlagPlatform.Name).Return(tc.platform)
 			mockConfig.EXPECT().GetString(configuration.ORGANIZATION).Return("aaacbb21-19b4-44f4-8483-d03746156f6b")
 
 			depGraphList := []workflow.Data{getValidDepGraph(t, "testdata/sbom_request_depgraph.json")}
@@ -268,9 +294,10 @@ func Test_Init_GivenWorkflowFlags_ShouldRegisterFlagsToWorkflowAndReturnThemInCo
 	err := sbomWorkflow.Init(engine)
 	require.Nil(t, err)
 
-	require.Len(t, sbomWorkflow.Flags, 2)
+	require.Len(t, sbomWorkflow.Flags, 3)
 
 	flagSbomFormat := config.Get(flags.FlagSbomFormat.Name)
+	mockConfig.EXPECT().GetString(flags.FlagPlatform.Name).Return("")
 	require.NotNil(t, flagSbomFormat)
 
 	flagExcludeAppVulns := config.Get(flags.FlagExcludeAppVulns.Name)

@@ -277,6 +277,7 @@ func Test_InitWorkflow_GivenFlags_ShouldRegisterFlagsToWorkflowAndReturnThemInCo
 }
 
 func initMocks() {
+	mockConfig.EXPECT().GetString(flags.FlagPlatform.Name).Return("")
 	mockConfig.EXPECT().GetBool(flags.FlagExcludeAppVulns.Name).Return(false)
 	mockConfig.EXPECT().GetString(constants.ContainerTargetArgName).Return(testContainerTargetArg)
 	mockConfig.EXPECT().Set(configuration.RAW_CMD_ARGS, gomock.AssignableToTypeOf([]string{}))
@@ -285,7 +286,7 @@ func initMocks() {
 	mockInvocationContext.EXPECT().GetEnhancedLogger().Return(logger)
 }
 
-func buildData(identifier workflow.Identifier, payload interface{}, target string) workflow.Data {
+func buildData(identifier workflow.Identifier, payload any, target string) workflow.Data {
 	d := workflow.NewData(identifier, constants.ContentTypeJSON, payload)
 	d.SetMetaData(constants.HeaderContentLocation, target)
 
