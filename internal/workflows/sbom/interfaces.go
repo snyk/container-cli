@@ -22,5 +22,11 @@ import (
 
 // SbomClient provides SBOM generation operations
 type SbomClient interface {
-	GetSbomForDepGraph(context.Context, string, string, *GetSbomForDepGraphRequest) (*GetSbomForDepGraphResult, error)
+	GetSbomForDepGraph(
+		ctx context.Context,
+		orgID string,
+		format string,
+		platform string,
+		req *GetSbomForDepGraphRequest,
+	) (*GetSbomForDepGraphResult, error)
 }

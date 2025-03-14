@@ -59,6 +59,20 @@ func (ef *SbomErrorFactory) NewInvalidSbomFormatError(
 	)
 }
 
+func (ef *SbomErrorFactory) NewInvalidPlatformError(
+	invalid string, validPlatforms []string,
+) *containererrors.ContainerExtensionError {
+	return ef.NewError(
+		fmt.Errorf("invalid platform provided (%s)", invalid),
+		fmt.Sprintf(
+			"The platform provided (%s) is not one of the available platforms. "+
+				"Available platforms are: %s",
+			invalid,
+			strings.Join(validPlatforms, ", "),
+		),
+	)
+}
+
 func (ef *SbomErrorFactory) NewDepGraphWorkflowError(err error) *containererrors.ContainerExtensionError {
 	return ef.NewError(
 		fmt.Errorf("error while invoking depgraph workflow: %w", err),

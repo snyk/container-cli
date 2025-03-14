@@ -31,4 +31,12 @@ var (
 		"",
 		fmt.Sprintf("Specify the SBOM output format. %s", constants.SbomValidFormats),
 	)
+	FlagPlatform = NewStringFlag(
+		"platform",
+		"",
+		fmt.Sprintf(
+			"For multi-architecture images, specify the platform for the container image. %s",
+			constants.ValidPlatforms,
+		),
+	)
 )

@@ -67,6 +67,10 @@ func (d *DepGraphWorkflow) entrypoint(ictx workflow.InvocationContext, _ []workf
 	logger.Info().Msg("starting the depgraph workflow")
 
 	baseCmdArgs := []string{"container", "test", "--print-graph", "--json"}
+	platform := flags.FlagPlatform.GetFlagValue(config)
+	if platform != "" {
+		baseCmdArgs = append(baseCmdArgs, fmt.Sprintf("--platform=%s", platform))
+	}
 	cmdArgs := buildCliCommand(baseCmdArgs, d.Flags, config)
 
 	logger.Info().Msgf("cli invocation args: %v", cmdArgs)

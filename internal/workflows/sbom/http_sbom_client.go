@@ -28,9 +28,6 @@ import (
 	sbomerrors "github.com/snyk/container-cli/internal/workflows/sbom/errors"
 )
 
-const apiVersion = "2022-03-31~experimental"
-const sbomForDepthGraphAPIEndpoint = "%s/hidden/orgs/%s/sbom?version=%s&format=%s"
-
 // HTTPSbomClientConfig represents the configuration for HTTPSbomClient
 type HTTPSbomClientConfig struct {
 	APIHost    string
@@ -60,7 +57,7 @@ func NewHTTPSbomClient(conf HTTPSbomClientConfig) *HTTPSbomClient {
 // GetSbomForDepGraph retrieves the SBOM for a depgraph
 func (c *HTTPSbomClient) GetSbomForDepGraph(
 	ctx context.Context,
-	orgID, format string,
+	orgID, format, platform string,
 	req *GetSbomForDepGraphRequest,
 ) (*GetSbomForDepGraphResult, error) {
 	body, err := json.Marshal(req)
@@ -68,10 +65,21 @@ func (c *HTTPSbomClient) GetSbomForDepGraph(
 		return nil, c.errFactory.NewInternalError(fmt.Errorf("failed to marshal sbom request: %w", err))
 	}
 
+	urlWithParams := fmt.Sprintf(
+		"%s/hidden/orgs/%s/sbom?version=%s&format=%s",
+		c.apiHost,
+		orgID,
+		"2022-03-31~experimental",
+		url.QueryEscape(format),
+	)
+	if platform != "" {
+		urlWithParams += fmt.Sprintf("&platform=%s", url.QueryEscape(platform))
+	}
+
 	httpReq, err := http.NewRequestWithContext(
 		ctx,
 		http.MethodPost,
-		fmt.Sprintf(sbomForDepthGraphAPIEndpoint, c.apiHost, orgID, apiVersion, url.QueryEscape(format)),
+		urlWithParams,
 		bytes.NewReader(body),
 	)
 	if err != nil {

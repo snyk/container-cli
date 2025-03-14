@@ -146,7 +146,8 @@ func Test_Entrypoint_GivenInvalidDepGraphPayloadType_ShouldReturnDepGraphWorkflo
 
 func Test_Entrypoint_GivenSbomForDepGraphError_ShouldPropagateClientError(t *testing.T) {
 	type test struct {
-		format string
+		format   string
+		platform string
 	}
 
 	tests := map[string]test{
@@ -182,6 +183,7 @@ func Test_Entrypoint_GivenSbomForDepGraphError_ShouldPropagateClientError(t *tes
 				gomock.Any(),
 				"aaacbb21-19b4-44f4-8483-d03746156f6b",
 				tc.format,
+				tc.platform,
 				&GetSbomForDepGraphRequest{
 					DepGraphs: getDepGraphBytes(depGraphList),
 					Subject: Subject{
@@ -198,7 +200,7 @@ func Test_Entrypoint_GivenSbomForDepGraphError_ShouldPropagateClientError(t *tes
 
 func Test_Entrypoint_GivenNoError_ShouldReturnSbomAsWorkflowData(t *testing.T) {
 	type test struct {
-		format, expectedDoc string
+		format, platform, expectedDoc string
 	}
 
 	tests := map[string]test{
@@ -238,6 +240,7 @@ func Test_Entrypoint_GivenNoError_ShouldReturnSbomAsWorkflowData(t *testing.T) {
 				gomock.Any(),
 				"aaacbb21-19b4-44f4-8483-d03746156f6b",
 				tc.format,
+				tc.platform,
 				&GetSbomForDepGraphRequest{
 					DepGraphs: getDepGraphBytes(depGraphList),
 					Subject: Subject{
