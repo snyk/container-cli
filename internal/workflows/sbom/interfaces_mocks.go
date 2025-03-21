@@ -35,16 +35,16 @@ func (m *MockSbomClient) EXPECT() *MockSbomClientMockRecorder {
 }
 
 // GetSbomForDepGraph mocks base method.
-func (m *MockSbomClient) GetSbomForDepGraph(arg0 context.Context, arg1, arg2 string, arg3 *GetSbomForDepGraphRequest) (*GetSbomForDepGraphResult, error) {
+	func (m *MockSbomClient) GetSbomForDepGraph(ctx context.Context, orgID string, format string, platform string, req *GetSbomForDepGraphRequest) (*GetSbomForDepGraphResult, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetSbomForDepGraph", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "GetSbomForDepGraph", ctx, orgID, format, platform, req)
 	ret0, _ := ret[0].(*GetSbomForDepGraphResult)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetSbomForDepGraph indicates an expected call of GetSbomForDepGraph.
-func (mr *MockSbomClientMockRecorder) GetSbomForDepGraph(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+func (mr *MockSbomClientMockRecorder) GetSbomForDepGraph(arg0, arg1, arg2, arg3, arg4 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSbomForDepGraph", reflect.TypeOf((*MockSbomClient)(nil).GetSbomForDepGraph), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSbomForDepGraph", reflect.TypeOf((*MockSbomClient)(nil).GetSbomForDepGraph), arg0, arg1, arg2, arg3, arg4)
 }

@@ -1,4 +1,4 @@
-// © 2023-2024 Snyk Limited All rights reserved.
+// © 2023-2025 Snyk Limited All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -46,6 +46,7 @@ func NewWorkflow(sbomClient SbomClient, errFactory *sbomerrors.SbomErrorFactory)
 			Flags: []flags.Flag{
 				flags.FlagSbomFormat,
 				flags.FlagExcludeAppVulns,
+				flags.FlagPlatform,
 			},
 		},
 		depGraph:   containerdepgraph.Workflow,
@@ -76,6 +77,12 @@ func (w *Workflow) entrypoint(ictx workflow.InvocationContext, _ []workflow.Data
 		return nil, err
 	}
 
+	logger.Debug().Msg("getting the platform")
+	var platform = flags.FlagPlatform.GetFlagValue(config)
+	if err := validatePlatform(platform, sbomconstants.ValidPlatforms, w.errFactory); err != nil {
+		return nil, err
+	}
+
 	logger.Debug().Msg("getting preferred organization id")
 	orgID := config.GetString(configuration.ORGANIZATION)
 	if orgID == "" {
@@ -100,13 +107,19 @@ func (w *Workflow) entrypoint(ictx workflow.InvocationContext, _ []workflow.Data
 		return nil, w.errFactory.NewDepGraphWorkflowError(err)
 	}
 
-	sbomResult, err := w.sbomClient.GetSbomForDepGraph(context.Background(), orgID, format, &GetSbomForDepGraphRequest{
-		DepGraphs: depGraphsBytes,
-		Subject: Subject{
-			Name:    imageName,
-			Version: imageVersion,
+	sbomResult, err := w.sbomClient.GetSbomForDepGraph(
+		context.Background(),
+		orgID,
+		format,
+		platform,
+		&GetSbomForDepGraphRequest{
+			DepGraphs: depGraphsBytes,
+			Subject: Subject{
+				Name:    imageName,
+				Version: imageVersion,
+			},
 		},
-	})
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -130,5 +143,12 @@ func validateSBOMFormat(candidate string, sbomFormats []string, errFactory *sbom
 		return errFactory.NewInvalidSbomFormatError(candidate, sbomFormats)
 	}
 
+	return nil
+}
+
+func validatePlatform(candidate string, platforms []string, errFactory *sbomerrors.SbomErrorFactory) error {
+	if candidate != "" && !slices.Contains(platforms, candidate) {
+		return errFactory.NewInvalidPlatformError(candidate, platforms)
+	}
 	return nil
 }

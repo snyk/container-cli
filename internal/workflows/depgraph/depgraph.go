@@ -1,4 +1,4 @@
-// © 2023-2024 Snyk Limited All rights reserved.
+// © 2023-2025 Snyk Limited All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -67,6 +67,10 @@ func (d *DepGraphWorkflow) entrypoint(ictx workflow.InvocationContext, _ []workf
 	logger.Info().Msg("starting the depgraph workflow")
 
 	baseCmdArgs := []string{"container", "test", "--print-graph", "--json"}
+	platform := flags.FlagPlatform.GetFlagValue(config)
+	if platform != "" {
+		baseCmdArgs = append(baseCmdArgs, fmt.Sprintf("--platform=%s", platform))
+	}
 	cmdArgs := buildCliCommand(baseCmdArgs, d.Flags, config)
 
 	logger.Info().Msgf("cli invocation args: %v", cmdArgs)

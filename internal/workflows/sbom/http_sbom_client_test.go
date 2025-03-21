@@ -1,4 +1,4 @@
-// © 2023-2024 Snyk Limited All rights reserved.
+// © 2023-2025 Snyk Limited All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -39,7 +39,8 @@ var (
 
 func Test_GetSbomForDepGraph_GivenNoError_ShouldReturnSbom(t *testing.T) {
 	type test struct {
-		format string
+		format   string
+		platform string
 	}
 
 	tests := map[string]test{
@@ -97,7 +98,7 @@ func Test_GetSbomForDepGraph_GivenNoError_ShouldReturnSbom(t *testing.T) {
 				ErrFactory: sbomerrors.NewSbomErrorFactory(&zlog.Logger),
 			})
 
-			res, err := client.GetSbomForDepGraph(context.Background(), orgID, tc.format, &req)
+			res, err := client.GetSbomForDepGraph(context.Background(), orgID, tc.format, tc.platform, &req)
 			require.NoError(t, err)
 
 			require.Equal(t, &GetSbomForDepGraphResult{

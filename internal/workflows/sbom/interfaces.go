@@ -1,4 +1,4 @@
-// © 2023-2024 Snyk Limited All rights reserved.
+// © 2023-2025 Snyk Limited All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,5 +22,11 @@ import (
 
 // SbomClient provides SBOM generation operations
 type SbomClient interface {
-	GetSbomForDepGraph(context.Context, string, string, *GetSbomForDepGraphRequest) (*GetSbomForDepGraphResult, error)
+	GetSbomForDepGraph(
+		ctx context.Context,
+		orgID string,
+		format string,
+		platform string,
+		req *GetSbomForDepGraphRequest,
+	) (*GetSbomForDepGraphResult, error)
 }

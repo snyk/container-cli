@@ -1,4 +1,4 @@
-// © 2023-2024 Snyk Limited All rights reserved.
+// © 2023-2025 Snyk Limited All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -55,6 +55,20 @@ func (ef *SbomErrorFactory) NewInvalidSbomFormatError(
 				"Available formats are: %s",
 			invalid,
 			strings.Join(validSbomFormats, ", "),
+		),
+	)
+}
+
+func (ef *SbomErrorFactory) NewInvalidPlatformError(
+	invalid string, validPlatforms []string,
+) *containererrors.ContainerExtensionError {
+	return ef.NewError(
+		fmt.Errorf("invalid platform provided (%s)", invalid),
+		fmt.Sprintf(
+			"The platform provided (%s) is not one of the available platforms. "+
+				"Available platforms are: %s",
+			invalid,
+			strings.Join(validPlatforms, ", "),
 		),
 	)
 }

@@ -1,4 +1,4 @@
-// © 2023-2024 Snyk Limited All rights reserved.
+// © 2023-2025 Snyk Limited All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -30,5 +30,13 @@ var (
 		"format",
 		"",
 		fmt.Sprintf("Specify the SBOM output format. %s", constants.SbomValidFormats),
+	)
+	FlagPlatform = NewStringFlag(
+		"platform",
+		"",
+		fmt.Sprintf(
+			"For multi-architecture images, specify the platform for the container image. %s",
+			constants.ValidPlatforms,
+		),
 	)
 )
