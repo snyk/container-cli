@@ -86,7 +86,7 @@ workflows:
           name: Secrets scan
           context:
             - snyk-bot-slack
-          channel: team-unify-alerts
+          channel: snyk-vuln-alerts-unify
           <<: *branch_exclude_main
       - commitlint/lint:
           name: Commit Lint
