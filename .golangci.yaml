@@ -4,6 +4,8 @@ linters:
     - asasalint
     # checks for dangerous unicode character sequences
     - bidichk
+    # detects places where loop variables are copied
+    - copyloopvar
     # checks whether HTTP response body is closed successfully
     #- bodyclose # not supported on Go >=1.18
     # code clone detection
@@ -12,8 +14,6 @@ linters:
     - errcheck
     # checks for problematic error-wrapping code
     - errorlint
-    # checks for pointers to enclosing loop vars.
-    - exportloopref
     # computes & checks the cognitive complexity of functions
     - gocognit
     # finds repeated strings that could be replaced by constant
