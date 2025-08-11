@@ -1,6 +1,6 @@
 module github.com/snyk/container-cli
 
-go 1.21
+go 1.24
 
 require (
 	github.com/docker/distribution v2.8.2+incompatible
