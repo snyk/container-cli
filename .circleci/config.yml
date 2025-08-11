@@ -7,7 +7,7 @@ orbs:
 go_image: &go_image
   resource_class: medium
   docker:
-    - image: cimg/go:1.21
+    - image: cimg/go:1.24
 
 node_image: &node_image
   resource_class: small
