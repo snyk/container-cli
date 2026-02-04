@@ -38,10 +38,8 @@ type DepGraphWorkflow struct {
 
 var Workflow = &DepGraphWorkflow{
 	BaseWorkflow: workflows.BaseWorkflow{
-		Name: "container depgraph",
-		Flags: []flags.Flag{
-			flags.FlagExcludeAppVulns,
-		},
+		Name:  "container depgraph",
+		Flags: flags.CommonFlags,
 	},
 }
 
@@ -67,10 +65,6 @@ func (d *DepGraphWorkflow) entrypoint(ictx workflow.InvocationContext, _ []workf
 	logger.Info().Msg("starting the depgraph workflow")
 
 	baseCmdArgs := []string{"container", "test", "--print-graph", "--json"}
-	platform := flags.FlagPlatform.GetFlagValue(config)
-	if platform != "" {
-		baseCmdArgs = append(baseCmdArgs, fmt.Sprintf("--platform=%s", platform))
-	}
 	cmdArgs := buildCliCommand(baseCmdArgs, d.Flags, config)
 
 	logger.Info().Msgf("cli invocation args: %v", cmdArgs)
@@ -111,7 +105,9 @@ func buildCliCommand(baseCmdArgs []string, flags []flags.Flag, config configurat
 
 	for _, flag := range flags {
 		arg := flag.GetAsCLIArgument(config)
-		cmdArgs = append(cmdArgs, arg)
+		if arg != "" {
+			cmdArgs = append(cmdArgs, arg)
+		}
 	}
 
 	cmdArgs = append(cmdArgs, config.GetString(constants.ContainerTargetArgName))
