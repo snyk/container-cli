@@ -1,4 +1,4 @@
-// © 2023-2025 Snyk Limited All rights reserved.
+// © 2023-2026 Snyk Limited All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -56,6 +56,18 @@ func Test_GetAsCLIArgument_GivenStringFlagAndConfig_ShouldReturnFlagAsCliArgumen
 	result := unit.GetAsCLIArgument(c)
 
 	require.Equal(t, fmt.Sprintf("--%s=%s", testStringFlagName, testStringFlagDefaultValue), result)
+}
+
+func Test_GetAsCLIArgument_GivenStringFlagWithEmptyValue_ShouldReturnEmptyString(t *testing.T) {
+	c := configuration.New()
+
+	unit := flags.NewStringFlag(testStringFlagName, "", testStringFlagUsage)
+	err := c.AddFlagSet(unit.FlagSet)
+	require.NoError(t, err)
+
+	result := unit.GetAsCLIArgument(c)
+
+	require.Equal(t, "", result)
 }
 
 func assertStringFlag(

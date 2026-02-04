@@ -1,4 +1,4 @@
-// © 2023-2025 Snyk Limited All rights reserved.
+// © 2023-2026 Snyk Limited All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -46,5 +46,8 @@ func (f *StringFlag) GetFlagValue(c configuration.Configuration) string {
 
 func (f *StringFlag) GetAsCLIArgument(c configuration.Configuration) string {
 	v := f.GetFlagValue(c)
+	if v == "" {
+		return ""
+	}
 	return fmt.Sprintf("--%s=%s", f.Name, v)
 }

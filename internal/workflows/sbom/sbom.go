@@ -1,4 +1,4 @@
-// © 2023-2025 Snyk Limited All rights reserved.
+// © 2023-2026 Snyk Limited All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -41,11 +41,10 @@ func NewWorkflow(sbomClient SbomClient, errFactory *sbomerrors.SbomErrorFactory)
 	return &Workflow{
 		BaseWorkflow: workflows.BaseWorkflow{
 			Name: "container sbom",
-			Flags: []flags.Flag{
-				flags.FlagSbomFormat,
-				flags.FlagExcludeAppVulns,
-				flags.FlagPlatform,
-			},
+			Flags: append(
+				[]flags.Flag{flags.FlagSbomFormat},
+				flags.CommonFlags...,
+			),
 		},
 		depGraph:   containerdepgraph.Workflow,
 		sbomClient: sbomClient,

@@ -1,4 +1,4 @@
-// © 2023-2025 Snyk Limited All rights reserved.
+// © 2023-2026 Snyk Limited All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -270,15 +270,69 @@ func Test_InitWorkflow_GivenFlags_ShouldRegisterFlagsToWorkflowAndReturnThemInCo
 	err := Workflow.InitWorkflow(engine)
 	require.Nil(t, err)
 
-	require.Len(t, Workflow.Flags, 1)
+	require.Len(t, Workflow.Flags, 6)
 
 	flagExcludeAppVulns := config.Get(flags.FlagExcludeAppVulns.Name)
 	require.NotNil(t, flagExcludeAppVulns)
+
+	flagUsername := config.Get(flags.FlagUsername.Name)
+	require.NotNil(t, flagUsername)
+
+	flagPassword := config.Get(flags.FlagPassword.Name)
+	require.NotNil(t, flagPassword)
+
+	flagExcludeNodeModules := config.Get(flags.FlagExcludeNodeModules.Name)
+	require.NotNil(t, flagExcludeNodeModules)
+
+	flagNestedJarsDepth := config.Get(flags.FlagNestedJarsDepth.Name)
+	require.NotNil(t, flagNestedJarsDepth)
+
+	flagPlatform := config.Get(flags.FlagPlatform.Name)
+	require.NotNil(t, flagPlatform)
+}
+
+func Test_Entrypoint_GivenFlagsAreSet_ShouldPassFlagsToLegacyCli(t *testing.T) {
+	beforeEach(t)
+	defer afterEach()
+
+	mockConfig.EXPECT().GetString(flags.FlagPlatform.Name).Return("linux/amd64")
+	mockConfig.EXPECT().GetBool(flags.FlagExcludeAppVulns.Name).Return(true)
+	mockConfig.EXPECT().GetString(flags.FlagUsername.Name).Return("myuser")
+	mockConfig.EXPECT().GetString(flags.FlagPassword.Name).Return("mypass")
+	mockConfig.EXPECT().GetBool(flags.FlagExcludeNodeModules.Name).Return(true)
+	mockConfig.EXPECT().GetString(flags.FlagNestedJarsDepth.Name).Return("3")
+	mockConfig.EXPECT().GetString(constants.ContainerTargetArgName).Return(testContainerTargetArg)
+
+	expectedArgs := []string{
+		"container", "test", "--print-graph", "--json",
+		"--exclude-app-vulns",
+		"--platform=linux/amd64",
+		"--username=myuser",
+		"--password=mypass",
+		"--exclude-node-modules",
+		"--nested-jars-depth=3",
+		testContainerTargetArg,
+	}
+
+	mockConfig.EXPECT().Set(configuration.RAW_CMD_ARGS, expectedArgs)
+
+	mockInvocationContext.EXPECT().GetConfiguration().Return(mockConfig)
+	mockInvocationContext.EXPECT().GetEnhancedLogger().Return(logger)
+
+	mockEngine.EXPECT().InvokeWithConfig(gomock.Any(), mockConfig).Return([]workflow.Data{}, nil)
+
+	// We ignore the return values because this test focuses exclusively on verifying the CLI command
+	// construction via the mock expectations above.
+	_, _ = unit.entrypoint(mockInvocationContext, nil)
 }
 
 func initMocks() {
 	mockConfig.EXPECT().GetString(flags.FlagPlatform.Name).Return("")
 	mockConfig.EXPECT().GetBool(flags.FlagExcludeAppVulns.Name).Return(false)
+	mockConfig.EXPECT().GetString(flags.FlagUsername.Name).Return("")
+	mockConfig.EXPECT().GetString(flags.FlagPassword.Name).Return("")
+	mockConfig.EXPECT().GetBool(flags.FlagExcludeNodeModules.Name).Return(false)
+	mockConfig.EXPECT().GetString(flags.FlagNestedJarsDepth.Name).Return("")
 	mockConfig.EXPECT().GetString(constants.ContainerTargetArgName).Return(testContainerTargetArg)
 	mockConfig.EXPECT().Set(configuration.RAW_CMD_ARGS, gomock.AssignableToTypeOf([]string{}))
 

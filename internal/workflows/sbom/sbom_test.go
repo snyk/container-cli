@@ -1,4 +1,4 @@
-// © 2023-2025 Snyk Limited All rights reserved.
+// © 2023-2026 Snyk Limited All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -294,14 +294,28 @@ func Test_Init_GivenWorkflowFlags_ShouldRegisterFlagsToWorkflowAndReturnThemInCo
 	err := sbomWorkflow.Init(engine)
 	require.Nil(t, err)
 
-	require.Len(t, sbomWorkflow.Flags, 3)
+	require.Len(t, sbomWorkflow.Flags, 7)
 
 	flagSbomFormat := config.Get(flags.FlagSbomFormat.Name)
-	mockConfig.EXPECT().GetString(flags.FlagPlatform.Name).Return("")
 	require.NotNil(t, flagSbomFormat)
 
 	flagExcludeAppVulns := config.Get(flags.FlagExcludeAppVulns.Name)
 	require.NotNil(t, flagExcludeAppVulns)
+
+	flagPlatform := config.Get(flags.FlagPlatform.Name)
+	require.NotNil(t, flagPlatform)
+
+	flagUsername := config.Get(flags.FlagUsername.Name)
+	require.NotNil(t, flagUsername)
+
+	flagPassword := config.Get(flags.FlagPassword.Name)
+	require.NotNil(t, flagPassword)
+
+	flagExcludeNodeModules := config.Get(flags.FlagExcludeNodeModules.Name)
+	require.NotNil(t, flagExcludeNodeModules)
+
+	flagNestedJarsDepth := config.Get(flags.FlagNestedJarsDepth.Name)
+	require.NotNil(t, flagNestedJarsDepth)
 }
 
 func getInvalidDepGraph() workflow.Data {
