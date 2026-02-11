@@ -24,6 +24,13 @@ import (
 )
 
 func depGraphMetadata(imgName string) (name, version string, err error) {
+	// Archive inputs (docker-archive:, oci-archive:, kaniko-archive:, *.tar) cannot be
+	// parsed by the Docker distribution reference library. Handle them separately.
+	if isArchiveInput(imgName) {
+		name, version = archiveMetadata(imgName)
+		return name, version, nil
+	}
+
 	// we currently don't have a way of extracting the clean image name & potentially a digest from
 	// the DepGraph output, so we use what's been passed on the command line.
 	ref, err := reference.Parse(imgName)
