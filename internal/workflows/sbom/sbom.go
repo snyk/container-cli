@@ -41,11 +41,10 @@ func NewWorkflow(sbomClient SbomClient, errFactory *sbomerrors.SbomErrorFactory)
 	return &Workflow{
 		BaseWorkflow: workflows.BaseWorkflow{
 			Name: "container sbom",
-			Flags: []flags.Flag{
-				flags.FlagSbomFormat,
-				flags.FlagExcludeAppVulns,
-				flags.FlagPlatform,
-			},
+			Flags: append(
+				[]flags.Flag{flags.FlagSbomFormat},
+				flags.CommonFlags...,
+			),
 		},
 		depGraph:   containerdepgraph.Workflow,
 		sbomClient: sbomClient,

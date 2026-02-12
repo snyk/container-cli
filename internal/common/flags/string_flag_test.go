@@ -58,6 +58,18 @@ func Test_GetAsCLIArgument_GivenStringFlagAndConfig_ShouldReturnFlagAsCliArgumen
 	require.Equal(t, fmt.Sprintf("--%s=%s", testStringFlagName, testStringFlagDefaultValue), result)
 }
 
+func Test_GetAsCLIArgument_GivenStringFlagWithEmptyValue_ShouldReturnEmptyString(t *testing.T) {
+	c := configuration.New()
+
+	unit := flags.NewStringFlag(testStringFlagName, "", testStringFlagUsage)
+	err := c.AddFlagSet(unit.FlagSet)
+	require.NoError(t, err)
+
+	result := unit.GetAsCLIArgument(c)
+
+	require.Equal(t, "", result)
+}
+
 func assertStringFlag(
 	bf *flags.StringFlag,
 	expectedName string,

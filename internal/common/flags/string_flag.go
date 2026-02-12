@@ -46,5 +46,8 @@ func (f *StringFlag) GetFlagValue(c configuration.Configuration) string {
 
 func (f *StringFlag) GetAsCLIArgument(c configuration.Configuration) string {
 	v := f.GetFlagValue(c)
+	if v == "" {
+		return ""
+	}
 	return fmt.Sprintf("--%s=%s", f.Name, v)
 }
