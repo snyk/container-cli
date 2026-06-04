@@ -59,6 +59,66 @@ var (
 		"",
 		"Maximum depth for nested JAR scanning",
 	)
+
+	// FlagFile is the path to a Dockerfile for instruction-level annotation.
+	FlagFile = NewStringFlag(
+		"file",
+		"",
+		"Path to the Dockerfile associated with the image",
+	)
+
+	// FlagExcludeBaseImageVulns strips base-image packages from the dep graph before upload.
+	FlagExcludeBaseImageVulns = NewBoolFlag(
+		"exclude-base-image-vulns",
+		false,
+		"Exclude vulnerabilities introduced by the base image",
+	)
+
+	// Dragonfly policy flags — used by the container test workflow to build LocalPolicy.
+
+	FlagSeverityThreshold = NewStringFlag(
+		"severity-threshold",
+		"",
+		"Only report vulnerabilities of the specified level or higher (low|medium|high|critical)",
+	)
+	FlagFailOn = NewStringFlag(
+		"fail-on",
+		"",
+		"Fail only when there are vulnerabilities that can be fixed (upgradable|all)",
+	)
+	FlagIgnorePolicy = NewBoolFlag(
+		"ignore-policy",
+		false,
+		"Bypass Snyk ignore policies and .snyk files",
+	)
+	FlagTargetReference = NewStringFlag(
+		"target-reference",
+		"",
+		"Target reference used to identify the test result",
+	)
+
+	// Project metadata flags — shared with os-flows.
+
+	FlagProjectTags = NewStringFlag(
+		"project-tags",
+		"",
+		"Project tags to associate with the test result (key=value,key=value)",
+	)
+	FlagProjectBusinessCriticality = NewStringFlag(
+		"project-business-criticality",
+		"",
+		"Business criticality of the project (critical|high|medium|low)",
+	)
+	FlagProjectEnvironment = NewStringFlag(
+		"project-environment",
+		"",
+		"Environment of the project (frontend|backend|internal|external|mobile|saas|onprem|hosted|distributed)",
+	)
+	FlagProjectLifecycle = NewStringFlag(
+		"project-lifecycle",
+		"",
+		"Lifecycle stage of the project (production|development|sandbox)",
+	)
 )
 
 // CommonFlags represents the flags that are shared between the top-level SBOM workflow
@@ -71,3 +131,18 @@ var CommonFlags = []Flag{
 	FlagExcludeNodeModules,
 	FlagNestedJarsDepth,
 }
+
+// TestFlags are the flags accepted by the container test workflow.
+var TestFlags = append(
+	CommonFlags,
+	FlagFile,
+	FlagExcludeBaseImageVulns,
+	FlagSeverityThreshold,
+	FlagFailOn,
+	FlagIgnorePolicy,
+	FlagTargetReference,
+	FlagProjectTags,
+	FlagProjectBusinessCriticality,
+	FlagProjectEnvironment,
+	FlagProjectLifecycle,
+)
