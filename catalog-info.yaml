@@ -4,8 +4,8 @@ metadata:
   name: container-cli
   annotations:
     github.com/project-slug: snyk/container-cli
-    github.com/team-slug: snyk/unify
+    github.com/team-slug: snyk/container_container
 spec:
   type: snyk-cli-plugin
   lifecycle: "-"
-  owner: unify
+  owner: container

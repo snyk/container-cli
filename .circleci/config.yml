@@ -77,7 +77,7 @@ workflows:
           <<: *branch_exclude_main
       - security-scans:
           name: Security Scans
-          context: analysis_unify
+          context: infrasec_container
           <<: *branch_exclude_main
       - unit_test:
           name: Unit Tests + Coverage
@@ -86,7 +86,7 @@ workflows:
           name: Secrets scan
           context:
             - snyk-bot-slack
-          channel: snyk-vuln-alerts-unify
+          channel: team-container-alerts
           <<: *branch_exclude_main
       - commitlint/lint:
           name: Commit Lint
@@ -100,7 +100,7 @@ workflows:
     jobs:
       - security-scans:
           name: Security Scans
-          context: analysis_unify
+          context: infrasec_container
           <<: *branch_only_main
       - lint:
           name: Lint
