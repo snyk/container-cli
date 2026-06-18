@@ -173,6 +173,100 @@ func TestConvertFindings_DecoratesDockerfileInstruction(t *testing.T) {
 	assert.Equal(t, "RUN apt-get install openssl", vulns[0].DockerfileInstruction)
 }
 
+// --- Transform end-to-end ------------------------------------------------
+
+// Empty findings produce an OK result with no vulns/apps and the no-vulns summary.
+func TestTransform_EmptyFindings(t *testing.T) {
+	got := Transform(TransformInput{ImagePath: "alpine:3.17"})
+	assert.True(t, got.OK)
+	assert.Empty(t, got.Vulnerabilities)
+	assert.Empty(t, got.Applications)
+	assert.Equal(t, "No known vulnerabilities", got.Summary)
+	assert.Equal(t, "alpine:3.17", got.Path)
+}
+
+// OS findings flow to vulnerabilities[]; app findings flow to applications[];
+// the buckets are matched to metas by file_path for packageManager + projectName.
+func TestTransform_MixedOSAndAppFindings(t *testing.T) {
+	findings := []testapi.FindingData{
+		makeFinding(t, "11111111-1111-1111-1111-111111111111", "os-vuln", "high",
+			makePackageLocation(t, "openssl", "1.1.1d-0"),
+		),
+		makeFinding(t, "22222222-2222-2222-2222-222222222222", "app-vuln", "medium",
+			makeSourceLocation(t, "/app/package.json"),
+			makePackageLocation(t, "lodash", "4.17.0"),
+		),
+	}
+	metas := []ScanResultMeta{
+		{PackageManager: "deb"},
+		{TargetFile: "/app/package.json", PackageManager: "npm", Name: "my-app"},
+	}
+	got := Transform(TransformInput{
+		Findings:        findings,
+		ScanResultMetas: metas,
+		ImagePath:       "node:18",
+	})
+
+	assert.False(t, got.OK)
+	require.Len(t, got.Vulnerabilities, 1)
+	assert.Equal(t, "openssl", got.Vulnerabilities[0].PackageName)
+	assert.Equal(t, "deb", got.PackageManager)
+
+	require.Len(t, got.Applications, 1)
+	app := got.Applications[0]
+	assert.Equal(t, "/app/package.json", app.TargetFile)
+	assert.Equal(t, "npm", app.PackageManager)
+	assert.Equal(t, "my-app", app.ProjectName)
+	require.Len(t, app.Vulnerabilities, 1)
+	assert.Equal(t, "lodash", app.Vulnerabilities[0].PackageName)
+}
+
+// BaseImageRemediationFact builds the docker.baseImageRemediation block with
+// a per-code advice array; the base image string flows onto docker.baseImage.
+func TestTransform_BuildsDockerBaseImageRemediation(t *testing.T) {
+	got := Transform(TransformInput{
+		ImagePath: "debian:10",
+		BaseImageFact: &BaseImageRemediationFact{
+			Code:              "OUTDATED_BASE_IMAGE",
+			BaseImageName:     "debian:10",
+			BaseImageOutdated: true,
+		},
+	})
+
+	require.NotNil(t, got.Docker)
+	assert.Equal(t, "debian:10", got.Docker.BaseImage)
+	require.NotNil(t, got.Docker.BaseImageRemediation)
+	rem := got.Docker.BaseImageRemediation
+	assert.Equal(t, "OUTDATED_BASE_IMAGE", rem.Code)
+	assert.True(t, rem.BaseImageOutdated)
+	require.NotEmpty(t, rem.Advice)
+	assert.Contains(t, rem.Advice[0].Message, "debian:10")
+}
+
+// Binary-attribution findings populate docker.binariesVulns with the issuesData +
+// affectedPkgs shape the legacy CLI consumers expect.
+func TestTransform_BuildsBinariesVulns(t *testing.T) {
+	binary := makeFinding(
+		t,
+		"55555555-5555-5555-5555-555555555555",
+		"binary-vuln",
+		"high",
+		makePackageLocation(t, "node", "18.0.0"),
+	)
+	binary.Attributes.Evidence = []testapi.Evidence{makeBinaryEvidence(t)}
+
+	got := Transform(TransformInput{
+		Findings:  []testapi.FindingData{binary},
+		ImagePath: "node:18",
+	})
+
+	require.NotNil(t, got.Docker)
+	require.NotNil(t, got.Docker.BinariesVulns)
+	assert.Len(t, got.Docker.BinariesVulns.IssuesData, 1)
+	assert.Len(t, got.Docker.BinariesVulns.AffectedPkgs, 1)
+	assert.Empty(t, got.Vulnerabilities, "binary findings must not appear in OS vulnerabilities[]")
+}
+
 // dockerBaseImage is decorated from the test-level BaseImageRemediationFact when present.
 func TestConvertFindings_DecoratesDockerBaseImage(t *testing.T) {
 	finding := makeFinding(
