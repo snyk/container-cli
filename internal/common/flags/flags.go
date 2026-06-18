@@ -82,7 +82,45 @@ var (
 		false,
 		"Ignore all policies, including the local .snyk policy file",
 	)
+
+	// FlagFile passes a Dockerfile path through to snyk-docker-plugin's dockerfileAnalysis.
+	FlagFile = NewStringFlag(
+		"file",
+		"",
+		"Dockerfile path; populates dockerfileInstruction decorations in the output",
+	)
+
+	// FlagExcludeBaseImageVulns drops base-image-attributed findings from the test outcome.
+	FlagExcludeBaseImageVulns = NewBoolFlag(
+		"exclude-base-image-vulns",
+		false,
+		"Exclude base-image findings from the test outcome",
+	)
+
+	// FlagTargetReference is the user-supplied reference (e.g. branch or tag)
+	// associated with this scan, surfaced on the Test for downstream consumers.
+	FlagTargetReference = NewStringFlag(
+		"target-reference",
+		"",
+		"Reference (e.g. git branch or tag) associated with this scan",
+	)
 )
+
+// TestFlags is the flag set the snyk container test workflow registers with the GAF engine.
+var TestFlags = []Flag{
+	FlagExcludeAppVulns,
+	FlagPlatform,
+	FlagUsername,
+	FlagPassword,
+	FlagExcludeNodeModules,
+	FlagNestedJarsDepth,
+	FlagSeverityThreshold,
+	FlagFailOn,
+	FlagIgnorePolicy,
+	FlagFile,
+	FlagExcludeBaseImageVulns,
+	FlagTargetReference,
+}
 
 // CommonFlags represents the flags that are shared between the top-level SBOM workflow
 // and the internal dependency graph workflow to control the container analysis.

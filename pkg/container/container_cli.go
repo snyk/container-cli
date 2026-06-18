@@ -20,6 +20,7 @@ import (
 	"github.com/snyk/container-cli/internal/workflows/depgraph"
 	"github.com/snyk/container-cli/internal/workflows/sbom"
 	sbomerrors "github.com/snyk/container-cli/internal/workflows/sbom/errors"
+	containertest "github.com/snyk/container-cli/internal/workflows/test"
 	"github.com/snyk/go-application-framework/pkg/configuration"
 	"github.com/snyk/go-application-framework/pkg/workflow"
 )
@@ -32,6 +33,10 @@ func Init(e workflow.Engine) error {
 
 	if err := depgraph.Workflow.InitWorkflow(e); err != nil {
 		return fmt.Errorf("could not initialise container depgraph workflow: %w", err)
+	}
+
+	if err := containertest.Workflow.InitWorkflow(e); err != nil {
+		return fmt.Errorf("could not initialise container test workflow: %w", err)
 	}
 
 	return nil

@@ -34,8 +34,6 @@ const defaultPollInterval = 5 * time.Second
 // authenticated HTTP client + per-org configuration. The blob store uses a
 // distinct URL base and retry semantics from the Test API, so the two clients
 // are constructed separately.
-//
-//nolint:unused // Consumed by the flow orchestrator in a follow-on PR (sub-ticket E).
 func setupFileUploadClient(ictx workflow.InvocationContext, orgID uuid.UUID) fileupload.Client {
 	cfg := ictx.GetConfiguration()
 	return fileupload.NewClient(
@@ -52,8 +50,6 @@ func setupFileUploadClient(ictx workflow.InvocationContext, orgID uuid.UUID) fil
 // /rest/. Polling-interval bookkeeping, transient-error retry, and context
 // cancellation live inside the testapi client; the workflow simply calls
 // StartTest and Wait.
-//
-//nolint:unused // Consumed by the flow orchestrator in a follow-on PR (sub-ticket E).
 func setupTestClient(ictx workflow.InvocationContext) (testapi.TestClient, error) {
 	cfg := ictx.GetConfiguration()
 	apiURL := cfg.GetString(configuration.API_URL)
