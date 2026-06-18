@@ -59,6 +59,29 @@ var (
 		"",
 		"Maximum depth for nested JAR scanning",
 	)
+
+	// FlagSeverityThreshold gates the test outcome on a minimum severity. Read by
+	// test.BuildLocalPolicy and forwarded as testapi.LocalPolicy.SeverityThreshold.
+	FlagSeverityThreshold = NewStringFlag(
+		"severity-threshold",
+		"",
+		"Only report findings of the given severity or higher (low|medium|high|critical)",
+	)
+
+	// FlagFailOn controls whether tests fail on findings with available upgrades.
+	// Read by test.BuildLocalPolicy and forwarded as testapi.LocalPolicy.FailOnUpgradable.
+	FlagFailOn = NewStringFlag(
+		"fail-on",
+		"",
+		"Fail the test only when the matched findings have an available remediation (upgradable|all)",
+	)
+
+	// FlagIgnorePolicy disables local .snyk policy ignores. Read by test.BuildLocalPolicy.
+	FlagIgnorePolicy = NewBoolFlag(
+		"ignore-policy",
+		false,
+		"Ignore all policies, including the local .snyk policy file",
+	)
 )
 
 // CommonFlags represents the flags that are shared between the top-level SBOM workflow
