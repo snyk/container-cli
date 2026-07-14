@@ -29,8 +29,194 @@
 package test
 
 import (
+	"encoding/json"
+	"strings"
+
 	"github.com/snyk/go-application-framework/pkg/apiclients/testapi"
 )
+
+// severityOrder ranks severity strings so threshold filtering reduces to a numeric compare.
+// Unknown severities rank 0, which means a finding with an unrecognised severity is dropped
+// the moment any threshold is set — fail-closed by design.
+var severityOrder = map[string]int{
+	"critical": 4,
+	"high":     3,
+	"medium":   2,
+	"low":      1,
+}
+
+// filterBySeverity drops findings below the threshold. An empty or unrecognised threshold
+// keeps everything (matches legacy "no flag, no filter" behaviour).
+func filterBySeverity(findings []testapi.FindingData, threshold string) []testapi.FindingData {
+	if threshold == "" {
+		return findings
+	}
+	minRank := severityOrder[strings.ToLower(threshold)]
+	if minRank == 0 {
+		return findings
+	}
+	out := make([]testapi.FindingData, 0, len(findings))
+	for _, f := range findings {
+		sev := ""
+		if f.Attributes != nil {
+			sev = strings.ToLower(string(f.Attributes.Rating.Severity))
+		}
+		if severityOrder[sev] >= minRank {
+			out = append(out, f)
+		}
+	}
+	return out
+}
+
+// separateBinaryFindings splits findings into package vulns and binary vulns.
+// Binary vulns carry binary-attribution evidence and surface in docker.binariesVulns
+// instead of vulnerabilities[].
+func separateBinaryFindings(findings []testapi.FindingData) (pkg []testapi.FindingData, binary []testapi.FindingData) {
+	for _, f := range findings {
+		if hasBinaryEvidence(f) {
+			binary = append(binary, f)
+		} else {
+			pkg = append(pkg, f)
+		}
+	}
+	return pkg, binary
+}
+
+// hasBinaryEvidence returns true when any Evidence on the finding carries the
+// binary_attribution discriminator. The GAF testapi Evidence union evolves over
+// time; we cope with two surfaces here: the typed Discriminator() helper, and a
+// raw "type" field fallback for forward-compatibility with serialised payloads
+// that the typed union does not yet know about.
+func hasBinaryEvidence(f testapi.FindingData) bool {
+	if f.Attributes == nil {
+		return false
+	}
+	for _, e := range f.Attributes.Evidence {
+		if disc, err := e.Discriminator(); err == nil && disc == "binary_attribution" {
+			return true
+		}
+		bts, err := e.MarshalJSON()
+		if err != nil {
+			continue
+		}
+		var raw map[string]json.RawMessage
+		if err := json.Unmarshal(bts, &raw); err != nil {
+			continue
+		}
+		typeVal, ok := raw["type"]
+		if !ok {
+			continue
+		}
+		var typeStr string
+		if err := json.Unmarshal(typeVal, &typeStr); err == nil && typeStr == "binary_attribution" {
+			return true
+		}
+	}
+	return false
+}
+
+// regroupBySourceLocation separates OS findings (no SourceLocation file_path)
+// from app findings and buckets the latter by file_path so the transformer can
+// reconstruct the applications[] array later.
+func regroupBySourceLocation(findings []testapi.FindingData) (
+	osFindings []testapi.FindingData,
+	appFindings map[string][]testapi.FindingData,
+) {
+	appFindings = make(map[string][]testapi.FindingData)
+	for _, f := range findings {
+		tf := sourceLocationFilePath(f)
+		if tf == "" {
+			osFindings = append(osFindings, f)
+		} else {
+			appFindings[tf] = append(appFindings[tf], f)
+		}
+	}
+	return osFindings, appFindings
+}
+
+// sourceLocationFilePath extracts file_path from the first SourceLocation
+// (discriminator="source") on a FindingData. OS findings have no SourceLocation
+// and return "".
+func sourceLocationFilePath(f testapi.FindingData) string {
+	if f.Attributes == nil {
+		return ""
+	}
+	for _, loc := range f.Attributes.Locations {
+		disc, err := loc.Discriminator()
+		if err != nil || disc != "source" {
+			continue
+		}
+		sl, err := loc.AsSourceLocation()
+		if err == nil && sl.FilePath != "" {
+			return sl.FilePath
+		}
+	}
+	return ""
+}
+
+// convertFindings maps a slice of canonical FindingData to the legacy
+// ContainerVuln shape, decorating each vuln with the local dockerfileAnalysis
+// fact (CLI-side; Registry never returned dockerfileInstruction) and the
+// test-level BaseImageRemediationFact (dockerBaseImage).
+func convertFindings(
+	findings []testapi.FindingData,
+	metas []ScanResultMeta,
+	metaIdx int,
+	baseImageFact *BaseImageRemediationFact,
+) []ContainerVuln {
+	var meta *ScanResultMeta
+	if metaIdx >= 0 && metaIdx < len(metas) {
+		meta = &metas[metaIdx]
+	}
+
+	vulns := make([]ContainerVuln, 0, len(findings))
+	for _, f := range findings {
+		v := findingToVuln(f)
+		if meta != nil && len(meta.DockerfilePackages) > 0 {
+			pkgBase := strings.SplitN(v.PackageName, "/", 2)[0]
+			if cmd, ok := meta.DockerfilePackages[pkgBase]; ok {
+				v.DockerfileInstruction = cmd
+			}
+		}
+		if baseImageFact != nil && baseImageFact.BaseImageName != "" {
+			v.DockerBaseImage = baseImageFact.BaseImageName
+		}
+		vulns = append(vulns, v)
+	}
+	return vulns
+}
+
+// findingToVuln maps a single canonical FindingData to ContainerVuln. Pulls
+// package name+version from the first PackageLocation; falls back to id-as-name
+// when no PackageLocation is present.
+func findingToVuln(f testapi.FindingData) ContainerVuln {
+	v := ContainerVuln{}
+	if f.Id != nil {
+		v.ID = f.Id.String()
+		v.Name = v.ID
+	}
+	if f.Attributes == nil {
+		return v
+	}
+
+	v.Title = f.Attributes.Title
+	v.Severity = strings.ToLower(string(f.Attributes.Rating.Severity))
+
+	for _, loc := range f.Attributes.Locations {
+		disc, err := loc.Discriminator()
+		if err != nil || disc != "package" {
+			continue
+		}
+		pl, err := loc.AsPackageLocation()
+		if err == nil {
+			v.PackageName = pl.Package.Name
+			v.Name = pl.Package.Name
+			v.Version = pl.Package.Version
+			break
+		}
+	}
+	return v
+}
 
 // ContainerTestResult is the top-level JSON shape for snyk container test --json output.
 // It mirrors the legacy TypeScript LegacyVulnerabilityResponse for docker/container.
