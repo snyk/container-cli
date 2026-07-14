@@ -30,10 +30,207 @@ package test
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/snyk/go-application-framework/pkg/apiclients/testapi"
 )
+
+// Transform converts the flat FindingData stream into the legacy
+// snyk container test --json output shape. Steps:
+//  1. Severity-filter the findings (matches test-outcome-enricher-df ordering).
+//  2. Split binary-attribution findings out of the main stream.
+//  3. Regroup package findings by SourceLocation file_path (OS bucket has none).
+//  4. Map each bucket's findings to ContainerVuln, decorating with dockerfile
+//     and dockerBaseImage as appropriate.
+//  5. Assemble the top-level result with `docker.*`, `applications[]`, and the
+//     OS-level `vulnerabilities[]` + summary text.
+func Transform(input TransformInput) ContainerTestResult {
+	filtered := filterBySeverity(input.Findings, input.SeverityThreshold)
+	packageFindings, binaryFindings := separateBinaryFindings(filtered)
+	osFindings, appBuckets := regroupBySourceLocation(packageFindings)
+
+	osVulns := convertFindings(osFindings, input.ScanResultMetas, 0, input.BaseImageFact)
+	dockerSection := buildDockerSection(input.BaseImageFact, binaryFindings)
+	apps := buildApplications(appBuckets, input.ScanResultMetas)
+
+	return ContainerTestResult{
+		OK:              len(osVulns) == 0 && allAppsOK(apps),
+		Vulnerabilities: osVulns,
+		UniqueCount:     len(osVulns),
+		PackageManager:  osPkgManager(input.ScanResultMetas),
+		Path:            input.ImagePath,
+		Docker:          dockerSection,
+		Applications:    apps,
+		Summary:         buildSummary(len(osVulns)),
+	}
+}
+
+// buildDockerSection assembles the docker: block. Returns nil when there is
+// neither a base-image fact nor any binary findings — the legacy output omits
+// the field entirely in that case.
+func buildDockerSection(fact *BaseImageRemediationFact, binaryFindings []testapi.FindingData) *DockerSection {
+	if fact == nil && len(binaryFindings) == 0 {
+		return nil
+	}
+	d := &DockerSection{}
+	if fact != nil {
+		d.BaseImage = fact.BaseImageName
+		d.BaseImageRemediation = buildBaseImageRemediation(fact)
+	}
+	if len(binaryFindings) > 0 {
+		d.BinariesVulns = buildBinariesVulns(binaryFindings)
+	}
+	return d
+}
+
+// buildBaseImageRemediation reconstructs the legacy advice[] presentation array
+// from the structured BaseImageRemediationFact. Ports the per-code formatters
+// from registry/src/lib/domain/needs-refactoring/docker/cli.ts.
+func buildBaseImageRemediation(fact *BaseImageRemediationFact) *BaseImageRemediation {
+	if fact == nil {
+		return nil
+	}
+	remediation := &BaseImageRemediation{
+		Code:              fact.Code,
+		BaseImageOutdated: fact.BaseImageOutdated,
+	}
+	switch fact.Code {
+	case "REMEDIATION_AVAILABLE":
+		remediation.Advice = formatRemediationAvailable(fact)
+	case "NO_REMEDIATION_AVAILABLE":
+		remediation.Advice = formatNoRemediationAvailable(fact)
+	case "OUTDATED_BASE_IMAGE":
+		remediation.Advice = formatOutdatedBaseImage(fact)
+	case "UNTRACKED_BASE_IMAGE":
+		remediation.Advice = []RemediationLine{
+			{Message: "Base image is not tracked by Snyk. To get base image upgrade recommendations, use an official image."},
+		}
+	case "UNSUPPORTED_REGISTRY":
+		remediation.Advice = []RemediationLine{
+			{Message: "Base image is from an unsupported registry. Snyk currently supports Docker Hub and select registries."},
+		}
+	case "INVALID_BASE_IMAGE_NAME":
+		remediation.Advice = []RemediationLine{
+			{Message: "Could not parse base image name from the Dockerfile."},
+		}
+	}
+	return remediation
+}
+
+func formatRemediationAvailable(fact *BaseImageRemediationFact) []RemediationLine {
+	return []RemediationLine{
+		{Message: fmt.Sprintf("Upgrade your base image from %s to a newer version:", fact.BaseImageName), Bold: true},
+		{Message: fmt.Sprintf("We recommend upgrading to a newer tag of %s to fix the vulnerabilities.", fact.BaseImageName)},
+	}
+}
+
+func formatNoRemediationAvailable(fact *BaseImageRemediationFact) []RemediationLine {
+	return []RemediationLine{
+		{Message: fmt.Sprintf("No upgrade available for base image %s.", fact.BaseImageName), Bold: true},
+		{Message: "Consider using a different base image."},
+	}
+}
+
+func formatOutdatedBaseImage(fact *BaseImageRemediationFact) []RemediationLine {
+	return []RemediationLine{
+		{Message: fmt.Sprintf("Your base image %s is outdated.", fact.BaseImageName), Bold: true},
+		{Message: "Upgrade to a newer tag to get security fixes."},
+	}
+}
+
+// buildBinariesVulns converts binary-attribution findings to the legacy
+// binariesVulns shape: a map keyed by issue id + a map of affected packages.
+func buildBinariesVulns(findings []testapi.FindingData) *BinariesVulns {
+	bv := &BinariesVulns{
+		IssuesData:   make(map[string]ContainerVuln),
+		AffectedPkgs: make(map[string]AffectedPkg),
+	}
+	for _, f := range findings {
+		v := findingToVuln(f)
+		bv.IssuesData[v.ID] = v
+
+		pkgKey := v.PackageName + "@" + v.Version
+		ap, exists := bv.AffectedPkgs[pkgKey]
+		if !exists {
+			ap = AffectedPkg{
+				Pkg:    PkgRef{Name: v.PackageName, Version: v.Version},
+				Issues: make(map[string]IssueRef),
+			}
+		}
+		ap.Issues[v.ID] = IssueRef{IssueID: v.ID}
+		bv.AffectedPkgs[pkgKey] = ap
+	}
+	return bv
+}
+
+// buildApplications builds the applications[] slice from per-targetFile finding
+// buckets, each one paired with the matching ScanResultMeta for packageManager
+// and project name. Buckets without a matching meta still appear, just with
+// empty packageManager/projectName.
+func buildApplications(appBuckets map[string][]testapi.FindingData, metas []ScanResultMeta) []AppResult {
+	if len(appBuckets) == 0 {
+		return nil
+	}
+	apps := make([]AppResult, 0, len(appBuckets))
+	for tf, findings := range appBuckets {
+		metaIdx := findMetaByTargetFile(metas, tf)
+		vulns := convertFindings(findings, metas, metaIdx, nil)
+
+		var pm, name string
+		if metaIdx >= 0 {
+			pm = metas[metaIdx].PackageManager
+			name = metas[metaIdx].Name
+		}
+		apps = append(apps, AppResult{
+			Vulnerabilities:   vulns,
+			PackageManager:    pm,
+			TargetFile:        tf,
+			ProjectName:       name,
+			DisplayTargetFile: tf,
+			UniqueCount:       len(vulns),
+			OK:                len(vulns) == 0,
+			Summary:           buildSummary(len(vulns)),
+		})
+	}
+	return apps
+}
+
+func findMetaByTargetFile(metas []ScanResultMeta, targetFile string) int {
+	for i, m := range metas {
+		if m.TargetFile == targetFile {
+			return i
+		}
+	}
+	return -1
+}
+
+func osPkgManager(metas []ScanResultMeta) string {
+	if len(metas) > 0 {
+		return metas[0].PackageManager
+	}
+	return ""
+}
+
+func allAppsOK(apps []AppResult) bool {
+	for _, a := range apps {
+		if !a.OK {
+			return false
+		}
+	}
+	return true
+}
+
+func buildSummary(vulnCount int) string {
+	switch vulnCount {
+	case 0:
+		return "No known vulnerabilities"
+	case 1:
+		return "1 known vulnerability"
+	default:
+		return fmt.Sprintf("%d known vulnerabilities", vulnCount)
+	}
+}
 
 // severityOrder ranks severity strings so threshold filtering reduces to a numeric compare.
 // Unknown severities rank 0, which means a finding with an unrecognised severity is dropped
