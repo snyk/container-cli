@@ -79,8 +79,6 @@ const dockerfileAnalysisFactType = "dockerfileAnalysis"
 // Phase 1 strategy: shell out via legacycli with `--print-graph --json` (same
 // pattern the depgraph workflow uses) and parse the full plugin output JSON.
 // Rewriting the TypeScript scanner in Go is a separate workstream.
-//
-//nolint:unused // Consumed by the flow orchestrator in a follow-on PR (sub-ticket E).
 func acquireScanResults(ictx workflow.InvocationContext) ([]ScanResultInput, []ScanResultMeta, error) {
 	cfg := ictx.GetConfiguration()
 	logger := ictx.GetEnhancedLogger()
