@@ -77,7 +77,9 @@ workflows:
           <<: *branch_exclude_main
       - security-scans:
           name: Security Scans
-          context: infrasec_container
+          context:
+            - infrasec_container
+            - prodsec-orb-runtime
           <<: *branch_exclude_main
       - unit_test:
           name: Unit Tests + Coverage
@@ -86,6 +88,7 @@ workflows:
           name: Secrets scan
           context:
             - snyk-bot-slack
+            - prodsec-orb-runtime
           channel: team-container-alerts
           <<: *branch_exclude_main
       - commitlint/lint:
@@ -100,7 +103,9 @@ workflows:
     jobs:
       - security-scans:
           name: Security Scans
-          context: infrasec_container
+          context:
+            - infrasec_container
+            - prodsec-orb-runtime
           <<: *branch_only_main
       - lint:
           name: Lint
