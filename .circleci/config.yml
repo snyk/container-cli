@@ -89,7 +89,7 @@ workflows:
           context:
             - snyk-bot-slack
             - prodsec-orb-runtime
-          channel: team-container-alerts
+          channel: team-sca-scanners-alerts
           <<: *branch_exclude_main
       - commitlint/lint:
           name: Commit Lint
