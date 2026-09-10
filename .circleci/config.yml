@@ -78,7 +78,7 @@ workflows:
       - security-scans:
           name: Security Scans
           context:
-            - infrasec_container
+            - engines_sca-scanners
             - prodsec-orb-runtime
           <<: *branch_exclude_main
       - unit_test:
@@ -104,7 +104,7 @@ workflows:
       - security-scans:
           name: Security Scans
           context:
-            - infrasec_container
+            - engines_sca-scanners
             - prodsec-orb-runtime
           <<: *branch_only_main
       - lint:
