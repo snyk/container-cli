@@ -7,7 +7,7 @@ orbs:
 go_image: &go_image
   resource_class: medium
   docker:
-    - image: cimg/go:1.26.3
+    - image: cimg/go:1.26.8
 
 node_image: &node_image
   resource_class: small
@@ -78,7 +78,7 @@ workflows:
       - security-scans:
           name: Security Scans
           context:
-            - infrasec_container
+            - engines_sca-scanners
             - prodsec-orb-runtime
           <<: *branch_exclude_main
       - unit_test:
@@ -89,7 +89,7 @@ workflows:
           context:
             - snyk-bot-slack
             - prodsec-orb-runtime
-          channel: team-container-alerts
+          channel: team-sca-scanners-alerts
           <<: *branch_exclude_main
       - commitlint/lint:
           name: Commit Lint
@@ -104,7 +104,7 @@ workflows:
       - security-scans:
           name: Security Scans
           context:
-            - infrasec_container
+            - engines_sca-scanners
             - prodsec-orb-runtime
           <<: *branch_only_main
       - lint:
