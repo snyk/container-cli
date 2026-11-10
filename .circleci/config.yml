@@ -1,8 +1,10 @@
 version: 2.1
 
 orbs:
+  # Snyk-owned orbs: track the latest release of the major version
   prodsec: snyk/prodsec-orb@1
-  commitlint: conventional-changelog/commitlint@1.0
+  # Third-party orbs: always pin an exact version
+  commitlint: conventional-changelog/commitlint@1.0.0
 
 go_image: &go_image
   resource_class: medium
