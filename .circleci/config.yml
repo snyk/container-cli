@@ -14,7 +14,7 @@ go_image: &go_image
 node_image: &node_image
   resource_class: small
   docker:
-    - image: cimg/node:18.18.0
+    - image: cimg/node:22
 
 branch_exclude_main: &branch_exclude_main
   filters:
@@ -95,7 +95,7 @@ workflows:
           <<: *branch_exclude_main
       - commitlint/lint:
           name: Commit Lint
-          node-version: 20.11.1
+          node-version: "22"
           <<: *branch_exclude_main
       - license_check:
           name: License Check
